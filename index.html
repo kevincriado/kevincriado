@@ -119,7 +119,6 @@
             transition: color 0.5s ease, transform 0.3s ease; 
         }
         
-        /* CORREGIDO: Transiciones suaves para el modo lectura */
         header, #thermometer-btn, .bg-bubbles, .aurora-cursor {
             transition: opacity 0.5s ease, visibility 0.5s ease;
         }
@@ -334,6 +333,21 @@
         #glossary-modal.hidden > div {
             transform: translateY(20px) scale(0.95);
         }
+        
+        #ai-tips-container ul {
+            list-style-position: inside;
+            padding-left: 1rem;
+        }
+        #ai-tips-container li::marker {
+            color: hsl(var(--primary-mid-hue), var(--primary-saturation), var(--primary-lightness));
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .loader {
+            animation: spin 1s linear infinite;
+        }
     </style>
 </head>
 <body class="antialiased scroll-smooth text-slate-200">
@@ -410,7 +424,6 @@
     </header>
 
     <main class="container mx-auto px-4 py-12 md:py-20 space-y-24 md:space-y-32">
-        <!-- El contenido de las secciones permanece igual -->
         <section id="intro" class="text-center flex flex-col items-center">
             <h1 id="main-title" class="text-4xl md:text-6xl lg:text-7xl font-extrabold mb-6">
                 <span class="gradient-text animate-title-word" style="animation-delay: 0.1s;">Burnout</span> <span class="gradient-text animate-title-word" style="animation-delay: 0.2s;">Académico</span>
@@ -511,9 +524,13 @@
                 <h2 class="text-3xl md:text-4xl font-extrabold animate-title text-white" data-translate-key="thermoTitle">Termómetro de Bienestar</h2>
                 <p class="text-lg text-gray-400 mt-2 animate-subtitle" style="animation-delay: 0.2s;" data-translate-key="thermoDesc">Responde a estas preguntas rápidas (inspiradas en la tesis) para una auto-reflexión. Esto no es un diagnóstico, solo una herramienta para pensar.</p>
             </div>
-            <div class="liquid-glass rounded-2xl p-8 md:p-12 flex flex-col md:flex-row gap-8 items-center">
-                <div class="w-full md:w-2/3"><div id="wellness-quiz" class="space-y-4"><div><p class="font-semibold mb-2 text-slate-100" data-translate-key="thermoQ1">1. ¿Con qué frecuencia te sientes emocionalmente agotado/a por tus estudios/trabajo?</p><div class="flex flex-wrap gap-2 text-sm"><label class="quiz-option p-2 rounded-lg border border-transparent hover:border-white/50 cursor-pointer transition-all duration-300"><input type="radio" name="q1" value="0" class="sr-only"> <span data-translate-key="thermoOpt1">Nunca</span></label><label class="quiz-option p-2 rounded-lg border border-transparent hover:border-white/50 cursor-pointer transition-all duration-300"><input type="radio" name="q1" value="1" class="sr-only"> <span data-translate-key="thermoOpt2">A veces</span></label><label class="quiz-option p-2 rounded-lg border border-transparent hover:border-white/50 cursor-pointer transition-all duration-300"><input type="radio" name="q1" value="2" class="sr-only"> <span data-translate-key="thermoOpt3">Frecuentemente</span></label></div></div><div><p class="font-semibold mb-2 text-slate-100" data-translate-key="thermoQ2">2. ¿Sientes que has perdido interés o entusiasmo por tus estudios/trabajo?</p><div class="flex flex-wrap gap-2 text-sm"><label class="quiz-option p-2 rounded-lg border border-transparent hover:border-white/50 cursor-pointer transition-all duration-300"><input type="radio" name="q2" value="0" class="sr-only"> <span data-translate-key="thermoOpt1">Nunca</span></label><label class="quiz-option p-2 rounded-lg border border-transparent hover:border-white/50 cursor-pointer transition-all duration-300"><input type="radio" name="q2" value="1" class="sr-only"> <span data-translate-key="thermoOpt2">A veces</span></label><label class="quiz-option p-2 rounded-lg border border-transparent hover:border-white/50 cursor-pointer transition-all duration-300"><input type="radio" name="q2" value="2" class="sr-only"> <span data-translate-key="thermoOpt3">Frecuentemente</span></label></div></div><div><p class="font-semibold mb-2 text-slate-100" data-translate-key="thermoQ3">3. ¿Dudas de tu capacidad para realizar bien tus tareas académicas/laborales?</p><div class="flex flex-wrap gap-2 text-sm"><label class="quiz-option p-2 rounded-lg border border-transparent hover:border-white/50 cursor-pointer transition-all duration-300"><input type="radio" name="q3" value="0" class="sr-only"> <span data-translate-key="thermoOpt1">Nunca</span></label><label class="quiz-option p-2 rounded-lg border border-transparent hover:border-white/50 cursor-pointer transition-all duration-300"><input type="radio" name="q3" value="1" class="sr-only"> <span data-translate-key="thermoOpt2">A veces</span></label><label class="quiz-option p-2 rounded-lg border border-transparent hover:border-white/50 cursor-pointer transition-all duration-300"><input type="radio" name="q3" value="2" class="sr-only"> <span data-translate-key="thermoOpt3">Frecuentemente</span></label></div></div></div></div>
-                <div id="wellness-result-container" class="w-full md:w-1/3 flex items-center justify-center"><div id="wellness-result" class="flex flex-col items-center transition-all duration-500 opacity-50"><p class="text-lg text-gray-400" data-translate-key="thermoResultPrompt">Completa el test para ver tu resultado.</p></div></div>
+            <div class="liquid-glass rounded-2xl p-6 md:p-8">
+                <div class="flex flex-col md:flex-row gap-8 items-start">
+                    <div class="w-full md:w-2/3"><div id="wellness-quiz" class="space-y-4"><div><p class="font-semibold mb-2 text-slate-100" data-translate-key="thermoQ1">1. ¿Con qué frecuencia te sientes emocionalmente agotado/a por tus estudios/trabajo?</p><div class="flex flex-wrap gap-2 text-sm"><label class="quiz-option p-2 rounded-lg border border-transparent hover:border-white/50 cursor-pointer transition-all duration-300"><input type="radio" name="q1" value="0" class="sr-only"> <span data-translate-key="thermoOpt1">Nunca</span></label><label class="quiz-option p-2 rounded-lg border border-transparent hover:border-white/50 cursor-pointer transition-all duration-300"><input type="radio" name="q1" value="1" class="sr-only"> <span data-translate-key="thermoOpt2">A veces</span></label><label class="quiz-option p-2 rounded-lg border border-transparent hover:border-white/50 cursor-pointer transition-all duration-300"><input type="radio" name="q1" value="2" class="sr-only"> <span data-translate-key="thermoOpt3">Frecuentemente</span></label></div></div><div><p class="font-semibold mb-2 text-slate-100" data-translate-key="thermoQ2">2. ¿Sientes que has perdido interés o entusiasmo por tus estudios/trabajo?</p><div class="flex flex-wrap gap-2 text-sm"><label class="quiz-option p-2 rounded-lg border border-transparent hover:border-white/50 cursor-pointer transition-all duration-300"><input type="radio" name="q2" value="0" class="sr-only"> <span data-translate-key="thermoOpt1">Nunca</span></label><label class="quiz-option p-2 rounded-lg border border-transparent hover:border-white/50 cursor-pointer transition-all duration-300"><input type="radio" name="q2" value="1" class="sr-only"> <span data-translate-key="thermoOpt2">A veces</span></label><label class="quiz-option p-2 rounded-lg border border-transparent hover:border-white/50 cursor-pointer transition-all duration-300"><input type="radio" name="q2" value="2" class="sr-only"> <span data-translate-key="thermoOpt3">Frecuentemente</span></label></div></div><div><p class="font-semibold mb-2 text-slate-100" data-translate-key="thermoQ3">3. ¿Dudas de tu capacidad para realizar bien tus tareas académicas/laborales?</p><div class="flex flex-wrap gap-2 text-sm"><label class="quiz-option p-2 rounded-lg border border-transparent hover:border-white/50 cursor-pointer transition-all duration-300"><input type="radio" name="q3" value="0" class="sr-only"> <span data-translate-key="thermoOpt1">Nunca</span></label><label class="quiz-option p-2 rounded-lg border border-transparent hover:border-white/50 cursor-pointer transition-all duration-300"><input type="radio" name="q3" value="1" class="sr-only"> <span data-translate-key="thermoOpt2">A veces</span></label><label class="quiz-option p-2 rounded-lg border border-transparent hover:border-white/50 cursor-pointer transition-all duration-300"><input type="radio" name="q3" value="2" class="sr-only"> <span data-translate-key="thermoOpt3">Frecuentemente</span></label></div></div></div></div>
+                    <div id="wellness-result-container" class="w-full md:w-1/3 flex items-center justify-center"><div id="wellness-result" class="flex flex-col items-center transition-all duration-500 opacity-50"><p class="text-lg text-gray-400" data-translate-key="thermoResultPrompt">Completa el test para ver tu resultado.</p></div></div>
+                </div>
+                <!-- Contenedor para los consejos de la IA -->
+                <div id="ai-tips-container" class="mt-6 border-t border-gray-500/30 pt-6 text-gray-300"></div>
             </div>
         </section>
         
@@ -670,6 +687,7 @@
                     exitZenBtn: document.getElementById('exit-zen-btn'),
                     quiz: document.getElementById('wellness-quiz'),
                     wellnessResult: document.getElementById('wellness-result'),
+                    aiTipsContainer: document.getElementById('ai-tips-container'), // NUEVO: Contenedor para consejos de IA
                     glossaryModal: document.getElementById('glossary-modal'),
                     glossaryTitle: document.getElementById('glossary-title'),
                     glossaryDefinition: document.getElementById('glossary-definition'),
@@ -690,7 +708,8 @@
                     isTouchDevice: ('ontouchstart' in window) || (navigator.maxTouchPoints > 0),
                     scatterPlotData: null,
                     currentMythIndex: -1,
-                    mythAnswered: false
+                    mythAnswered: false,
+                    currentScore: null // NUEVO: Almacena la puntuación del termómetro
                 };
 
                 // --- DICCIONARIOS DE TRADUCCIÓN Y DATOS ---
@@ -987,6 +1006,58 @@
                     dom.quizNextBtn.classList.remove('hidden');
                 };
 
+                // --- NUEVO: LÓGICA DE LA API DE GEMINI ---
+                const getAITips = async () => {
+                    if (state.currentScore === null) return;
+                    
+                    const tipsContainer = dom.aiTipsContainer;
+                    tipsContainer.innerHTML = `<div class="flex items-center justify-center gap-2 text-gray-400"><i data-lucide="loader" class="loader"></i><p>Generando consejos personalizados...</p></div>`;
+                    lucide.createIcons();
+
+                    let levelDescription;
+                    if (state.currentScore <= 1) {
+                        levelDescription = "un nivel bajo de burnout, indicando un buen equilibrio.";
+                    } else if (state.currentScore <= 4) {
+                        levelDescription = "un nivel moderado de burnout, con algunas señales de alerta.";
+                    } else {
+                        levelDescription = "un nivel alto de burnout, con un desgaste considerable.";
+                    }
+                    
+                    const prompt = `Eres un consejero de bienestar estudiantil empático y experto. Un estudiante de psicología ha indicado ${levelDescription} Basado en esto, genera una lista corta (3-4 puntos clave) de consejos prácticos, accionables y alentadores. Enfócate en pasos pequeños que pueda tomar de inmediato. Usa un tono de apoyo y evita lenguaje clínico complejo. Formatea la respuesta como una lista de viñetas (usando '*' o '-'). Responde en español.`;
+
+                    try {
+                        const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+                        const apiKey = ""; // Se deja en blanco según las instrucciones
+                        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+                        const response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`Error en la API: ${response.statusText}`);
+                        }
+
+                        const result = await response.json();
+                        
+                        if (result.candidates && result.candidates.length > 0 &&
+                            result.candidates[0].content && result.candidates[0].content.parts &&
+                            result.candidates[0].content.parts.length > 0) {
+                            const text = result.candidates[0].content.parts[0].text;
+                            // Formatear el texto como una lista HTML
+                            const formattedText = '<ul>' + text.trim().split(/[\n*•-]/).filter(item => item.trim() !== '').map(item => `<li>${item.trim()}</li>`).join('') + '</ul>';
+                            tipsContainer.innerHTML = `<h4 class="font-bold text-lg mb-2 text-slate-100">Sugerencias Personalizadas para Ti:</h4>${formattedText}`;
+                        } else {
+                            throw new Error("Respuesta inesperada de la API.");
+                        }
+                    } catch (error) {
+                        console.error("Error al obtener consejos de la IA:", error);
+                        tipsContainer.innerHTML = `<p class="text-red-400">Lo sentimos, no se pudieron generar los consejos en este momento. Por favor, inténtalo de nuevo más tarde.</p>`;
+                    }
+                };
+
                 // --- MANEJO DE EVENTOS (EVENT HANDLING) ---
 
                 const handleControlsClick = (e) => {
@@ -999,6 +1070,9 @@
                         toggleZenMode();
                     } else if (button.id.includes('lang-toggle')) {
                         setLanguage(state.lang === 'es' ? 'en' : 'es');
+                    } else if (button.id === 'get-ai-tips-btn') { // NUEVO: Evento para el botón de IA
+                        getAITips();
+                        button.disabled = true; // Desactivar después del primer clic
                     }
                 };
                 
@@ -1016,7 +1090,6 @@
                 // --- INICIALIZACIÓN DE LA APLICACIÓN ---
 
                 const init = () => {
-                    // Carga inicial y preloader
                     window.addEventListener('load', () => {
                         if (dom.preloader) {
                             dom.preloader.style.opacity = '0';
@@ -1024,10 +1097,8 @@
                         }
                     }, { once: true });
 
-                    // Configuración inicial de UI
                     if (state.isTouchDevice && dom.aurora) dom.aurora.style.display = 'none';
                     
-                    // Event Listeners
                     if (!state.isTouchDevice && dom.aurora) {
                         window.addEventListener('mousemove', (e) => { 
                             dom.aurora.style.left = `${e.clientX}px`; 
@@ -1048,7 +1119,6 @@
                     if (dom.mobileControls) dom.mobileControls.addEventListener('click', handleControlsClick);
                     if (dom.exitZenBtn) dom.exitZenBtn.addEventListener('click', toggleZenMode);
                     
-                    // CORREGIDO: Cierra el modal solo si se hace clic en el fondo, no en el contenido.
                     if (dom.glossaryModal) {
                         dom.glossaryModal.addEventListener('click', (e) => {
                             if (e.target === dom.glossaryModal) {
@@ -1067,13 +1137,11 @@
                         });
                     }
 
-                    // Observadores de Intersección para animaciones
                     const fadeInObserver = new IntersectionObserver((entries, observer) => {
                         entries.forEach(entry => {
                             if (entry.isIntersecting) {
                                 entry.target.classList.add('is-visible');
                                 
-                                // Animar barras de progreso
                                 entry.target.querySelectorAll('.finding-item').forEach(item => {
                                     const bar = item.querySelector('.progress-bar');
                                     if(bar) {
@@ -1106,7 +1174,6 @@
                     }, { rootMargin: "-50% 0px -50% 0px", threshold: 0.5 });
                     document.querySelectorAll('main > section').forEach(section => navObserver.observe(section));
 
-                    // Animación de burbujas
                     if (dom.bubbleContainer) setInterval(() => {
                         const bubble = document.createElement('div');
                         const size = Math.random() * 150 + 50;
@@ -1125,7 +1192,6 @@
                         setTimeout(() => bubble.remove(), 40000);
                     }, 800);
 
-                    // Cuestionario de Bienestar
                     if (dom.quiz) {
                         dom.quiz.addEventListener('change', (e) => {
                             document.querySelectorAll(`input[name="${e.target.name}"]`).forEach(radio => radio.parentElement.classList.remove('selected'));
@@ -1137,7 +1203,8 @@
 
                             if (q1 && q2 && q3) {
                                 const score = parseInt(q1.value) + parseInt(q2.value) + parseInt(q3.value);
-                                let resultText, resultColor, resultTitle, resultIcon;
+                                state.currentScore = score; // Almacenar puntuación
+                                let resultText, resultColor, resultTitle, resultIcon, aiButtonText;
                                 const percentage = (score / 6) * 100;
                                 
                                 if (score <= 1) {
@@ -1153,6 +1220,7 @@
                                     resultText = state.lang === 'es' ? 'Nivel de desgaste considerable. Es un buen momento para buscar apoyo activamente.' : 'Considerable level of burnout. It\'s a good time to actively seek support.';
                                     resultColor = `hsl(0, 80%, 60%)`; resultIcon = 'shield-alert';
                                 }
+                                aiButtonText = state.lang === 'es' ? 'Obtener Consejos con IA' : 'Get AI Tips';
                                 
                                 if(dom.wellnessResult) {
                                     dom.wellnessResult.innerHTML = `
@@ -1168,6 +1236,9 @@
                                                 </div>
                                             </div>
                                             <p class="text-gray-400 mt-4 text-sm text-center animate-title-word" style="animation-delay: 0.4s;">${resultText}</p>
+                                            <button id="get-ai-tips-btn" class="mt-4 liquid-glass font-semibold py-2 px-4 rounded-xl flex items-center space-x-2 theme-button hover:scale-105 text-sm">
+                                                <i data-lucide="sparkles" class="w-4 h-4"></i><span>${aiButtonText}</span>
+                                            </button>
                                         </div>`;
                                     setTimeout(() => {
                                         const animatedPath = dom.wellnessResult.querySelector('path.stroke-current:not(.text-gray-700)');
@@ -1175,19 +1246,21 @@
                                     }, 100);
                                     lucide.createIcons();
                                     dom.wellnessResult.classList.remove('opacity-50');
+                                    // Añadir el listener al nuevo botón de IA
+                                    document.getElementById('get-ai-tips-btn').addEventListener('click', handleControlsClick);
                                 }
+                                dom.aiTipsContainer.innerHTML = ''; // Limpiar consejos anteriores
                             }
                         });
                     }
 
-                    // Inicializar estado y renderizar
                     lucide.createIcons();
                     setLanguage(state.lang);
                     applyTheme(state.theme);
                     setupSocialSharing();
                 };
 
-                init(); // Ejecutar la aplicación
+                init();
             });
         })();
     </script>
