@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html lang="es" class="dark">
 <head>
+    <!-- Google Tag Manager -->
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-5HTNWL2D');</script>
+    <!-- End Google Tag Manager -->
+    
     <!-- CORREGIDO: Meta charset movido al principio para asegurar la correcta codificación de caracteres -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -243,7 +251,9 @@
         .nav-link:hover {
             transform: translateY(-2px);
         }
+        /* CORREGIDO: Se añade un color de fondo de respaldo para mayor compatibilidad */
         .nav-link.nav-active {
+            background-color: hsl(var(--primary-mid-hue), var(--primary-saturation), var(--primary-lightness));
             background-image: linear-gradient(135deg, 
                 hsl(var(--primary-start-hue), var(--primary-saturation), var(--primary-lightness)), 
                 hsl(var(--primary-mid-hue), var(--primary-saturation), var(--primary-lightness)), 
@@ -271,11 +281,22 @@
             color: white;
         }
         .quiz-option.selected span { color: white !important; }
+        
+        /* CORREGIDO: Animación de botón más responsiva */
         .quiz-answer-btn:active {
             transform: scale(0.95);
             transition: transform 0.1s ease;
         }
         
+        /* CORREGIDO: Estilos para la transición suave de preguntas del quiz */
+        #quiz-statement {
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+        }
+        #quiz-statement.loading {
+            opacity: 0;
+            transform: translateY(-15px);
+        }
+
         #scatter-plot-container {
             width: 100%;
             max-width: 800px;
@@ -333,24 +354,14 @@
         #glossary-modal.hidden > div {
             transform: translateY(20px) scale(0.95);
         }
-        
-        #ai-tips-container ul {
-            list-style-position: inside;
-            padding-left: 1rem;
-        }
-        #ai-tips-container li::marker {
-            color: hsl(var(--primary-mid-hue), var(--primary-saturation), var(--primary-lightness));
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        .loader {
-            animation: spin 1s linear infinite;
-        }
     </style>
 </head>
 <body class="antialiased scroll-smooth text-slate-200">
+    <!-- Google Tag Manager (noscript) -->
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5HTNWL2D"
+    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <!-- End Google Tag Manager (noscript) -->
+
     <!-- Pantalla de carga -->
     <div id="preloader"><svg class="preloader-icon text-slate-400" xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V4M7 7l5-3 5 3M7 7c-2.5 0-2.5 4 0 4M17 7c2.5 0 2.5 4 0 4"/></svg></div>
     
@@ -415,7 +426,8 @@
                         <button class="theme-btn p-2 rounded-lg" data-theme="orange" aria-label="Tema Naranja"><div class="w-5 h-5 rounded-full bg-gradient-to-br from-amber-400 to-orange-600 transition-transform"></div></button>
                     </div>
                      <div class="flex items-center space-x-1 rounded-xl p-1">
-                        <button id="zen-toggle-mobile" class="p-2 rounded-lg hover:bg-white/10" aria-label="Activar modo lectura"><i data-lucide="book-open"></i></button>
+                        <!-- CORREGIDO: Botón de modo lectura oculto en móvil -->
+                        <button id="zen-toggle-mobile" class="p-2 rounded-lg hover:bg-white/10 hidden" aria-label="Activar modo lectura"><i data-lucide="book-open"></i></button>
                         <button id="lang-toggle-mobile" class="p-2 rounded-lg hover:bg-white/10 font-semibold" aria-label="Cambiar idioma">EN</button>
                     </div>
                 </div>
@@ -424,6 +436,7 @@
     </header>
 
     <main class="container mx-auto px-4 py-12 md:py-20 space-y-24 md:space-y-32">
+        <!-- El contenido de las secciones permanece igual -->
         <section id="intro" class="text-center flex flex-col items-center">
             <h1 id="main-title" class="text-4xl md:text-6xl lg:text-7xl font-extrabold mb-6">
                 <span class="gradient-text animate-title-word" style="animation-delay: 0.1s;">Burnout</span> <span class="gradient-text animate-title-word" style="animation-delay: 0.2s;">Académico</span>
@@ -524,13 +537,9 @@
                 <h2 class="text-3xl md:text-4xl font-extrabold animate-title text-white" data-translate-key="thermoTitle">Termómetro de Bienestar</h2>
                 <p class="text-lg text-gray-400 mt-2 animate-subtitle" style="animation-delay: 0.2s;" data-translate-key="thermoDesc">Responde a estas preguntas rápidas (inspiradas en la tesis) para una auto-reflexión. Esto no es un diagnóstico, solo una herramienta para pensar.</p>
             </div>
-            <div class="liquid-glass rounded-2xl p-6 md:p-8">
-                <div class="flex flex-col md:flex-row gap-8 items-start">
-                    <div class="w-full md:w-2/3"><div id="wellness-quiz" class="space-y-4"><div><p class="font-semibold mb-2 text-slate-100" data-translate-key="thermoQ1">1. ¿Con qué frecuencia te sientes emocionalmente agotado/a por tus estudios/trabajo?</p><div class="flex flex-wrap gap-2 text-sm"><label class="quiz-option p-2 rounded-lg border border-transparent hover:border-white/50 cursor-pointer transition-all duration-300"><input type="radio" name="q1" value="0" class="sr-only"> <span data-translate-key="thermoOpt1">Nunca</span></label><label class="quiz-option p-2 rounded-lg border border-transparent hover:border-white/50 cursor-pointer transition-all duration-300"><input type="radio" name="q1" value="1" class="sr-only"> <span data-translate-key="thermoOpt2">A veces</span></label><label class="quiz-option p-2 rounded-lg border border-transparent hover:border-white/50 cursor-pointer transition-all duration-300"><input type="radio" name="q1" value="2" class="sr-only"> <span data-translate-key="thermoOpt3">Frecuentemente</span></label></div></div><div><p class="font-semibold mb-2 text-slate-100" data-translate-key="thermoQ2">2. ¿Sientes que has perdido interés o entusiasmo por tus estudios/trabajo?</p><div class="flex flex-wrap gap-2 text-sm"><label class="quiz-option p-2 rounded-lg border border-transparent hover:border-white/50 cursor-pointer transition-all duration-300"><input type="radio" name="q2" value="0" class="sr-only"> <span data-translate-key="thermoOpt1">Nunca</span></label><label class="quiz-option p-2 rounded-lg border border-transparent hover:border-white/50 cursor-pointer transition-all duration-300"><input type="radio" name="q2" value="1" class="sr-only"> <span data-translate-key="thermoOpt2">A veces</span></label><label class="quiz-option p-2 rounded-lg border border-transparent hover:border-white/50 cursor-pointer transition-all duration-300"><input type="radio" name="q2" value="2" class="sr-only"> <span data-translate-key="thermoOpt3">Frecuentemente</span></label></div></div><div><p class="font-semibold mb-2 text-slate-100" data-translate-key="thermoQ3">3. ¿Dudas de tu capacidad para realizar bien tus tareas académicas/laborales?</p><div class="flex flex-wrap gap-2 text-sm"><label class="quiz-option p-2 rounded-lg border border-transparent hover:border-white/50 cursor-pointer transition-all duration-300"><input type="radio" name="q3" value="0" class="sr-only"> <span data-translate-key="thermoOpt1">Nunca</span></label><label class="quiz-option p-2 rounded-lg border border-transparent hover:border-white/50 cursor-pointer transition-all duration-300"><input type="radio" name="q3" value="1" class="sr-only"> <span data-translate-key="thermoOpt2">A veces</span></label><label class="quiz-option p-2 rounded-lg border border-transparent hover:border-white/50 cursor-pointer transition-all duration-300"><input type="radio" name="q3" value="2" class="sr-only"> <span data-translate-key="thermoOpt3">Frecuentemente</span></label></div></div></div></div>
-                    <div id="wellness-result-container" class="w-full md:w-1/3 flex items-center justify-center"><div id="wellness-result" class="flex flex-col items-center transition-all duration-500 opacity-50"><p class="text-lg text-gray-400" data-translate-key="thermoResultPrompt">Completa el test para ver tu resultado.</p></div></div>
-                </div>
-                <!-- Contenedor para los consejos de la IA -->
-                <div id="ai-tips-container" class="mt-6 border-t border-gray-500/30 pt-6 text-gray-300"></div>
+            <div class="liquid-glass rounded-2xl p-8 md:p-12 flex flex-col md:flex-row gap-8 items-center">
+                <div class="w-full md:w-2/3"><div id="wellness-quiz" class="space-y-4"><div><p class="font-semibold mb-2 text-slate-100" data-translate-key="thermoQ1">1. ¿Con qué frecuencia te sientes emocionalmente agotado/a por tus estudios/trabajo?</p><div class="flex flex-wrap gap-2 text-sm"><label class="quiz-option p-2 rounded-lg border border-transparent hover:border-white/50 cursor-pointer transition-all duration-300"><input type="radio" name="q1" value="0" class="sr-only"> <span data-translate-key="thermoOpt1">Nunca</span></label><label class="quiz-option p-2 rounded-lg border border-transparent hover:border-white/50 cursor-pointer transition-all duration-300"><input type="radio" name="q1" value="1" class="sr-only"> <span data-translate-key="thermoOpt2">A veces</span></label><label class="quiz-option p-2 rounded-lg border border-transparent hover:border-white/50 cursor-pointer transition-all duration-300"><input type="radio" name="q1" value="2" class="sr-only"> <span data-translate-key="thermoOpt3">Frecuentemente</span></label></div></div><div><p class="font-semibold mb-2 text-slate-100" data-translate-key="thermoQ2">2. ¿Sientes que has perdido interés o entusiasmo por tus estudios/trabajo?</p><div class="flex flex-wrap gap-2 text-sm"><label class="quiz-option p-2 rounded-lg border border-transparent hover:border-white/50 cursor-pointer transition-all duration-300"><input type="radio" name="q2" value="0" class="sr-only"> <span data-translate-key="thermoOpt1">Nunca</span></label><label class="quiz-option p-2 rounded-lg border border-transparent hover:border-white/50 cursor-pointer transition-all duration-300"><input type="radio" name="q2" value="1" class="sr-only"> <span data-translate-key="thermoOpt2">A veces</span></label><label class="quiz-option p-2 rounded-lg border border-transparent hover:border-white/50 cursor-pointer transition-all duration-300"><input type="radio" name="q2" value="2" class="sr-only"> <span data-translate-key="thermoOpt3">Frecuentemente</span></label></div></div><div><p class="font-semibold mb-2 text-slate-100" data-translate-key="thermoQ3">3. ¿Dudas de tu capacidad para realizar bien tus tareas académicas/laborales?</p><div class="flex flex-wrap gap-2 text-sm"><label class="quiz-option p-2 rounded-lg border border-transparent hover:border-white/50 cursor-pointer transition-all duration-300"><input type="radio" name="q3" value="0" class="sr-only"> <span data-translate-key="thermoOpt1">Nunca</span></label><label class="quiz-option p-2 rounded-lg border border-transparent hover:border-white/50 cursor-pointer transition-all duration-300"><input type="radio" name="q3" value="1" class="sr-only"> <span data-translate-key="thermoOpt2">A veces</span></label><label class="quiz-option p-2 rounded-lg border border-transparent hover:border-white/50 cursor-pointer transition-all duration-300"><input type="radio" name="q3" value="2" class="sr-only"> <span data-translate-key="thermoOpt3">Frecuentemente</span></label></div></div></div></div>
+                <div id="wellness-result-container" class="w-full md:w-1/3 flex items-center justify-center"><div id="wellness-result" class="flex flex-col items-center transition-all duration-500 opacity-50"><p class="text-lg text-gray-400" data-translate-key="thermoResultPrompt">Completa el test para ver tu resultado.</p></div></div>
             </div>
         </section>
         
@@ -597,8 +606,8 @@
         <section id="contact" class="scroll-mt-24 fade-in-section">
             <div class="text-center mb-12"><div class="inline-block p-4 liquid-glass rounded-2xl mb-4 group transition-transform duration-300 hover:scale-110"><i data-lucide="users-2" class="w-10 h-10 gradient-icon"></i></div><h2 class="text-3xl md:text-4xl font-extrabold animate-title text-white" data-translate-key="contactTitle">Los Autores</h2><p class="text-lg text-gray-400 mt-2 animate-subtitle" style="animation-delay: 0.2s;" data-translate-key="contactSubtitle">Conoce a los investigadores detrás del proyecto.</p></div>
             <div class="max-w-4xl mx-auto grid md:grid-cols-2 gap-8">
-                <div class="liquid-glass rounded-2xl p-6 text-center flex flex-col items-center author-card group overflow-hidden relative"><img src="https://i.ibb.co/L8rXW72/kevin-criado.jpg" alt="Foto de Kevin Joel Criado Pérez" class="author-photo w-32 h-32 rounded-full object-cover mb-4 border-4 border-transparent" loading="lazy" decoding="async"><h3 class="text-2xl font-bold text-slate-100">Kevin Joel Criado Pérez</h3><p class="gradient-text font-semibold mb-2" data-translate-key="contactProfession">Psicólogo</p><p class="text-gray-300 italic text-sm mb-4 transition-opacity duration-300 group-hover:opacity-0" data-translate-key="contactQuote1">"Apasionado por comprender la dinámica de la salud mental en contextos de alta exigencia."</p><div class="absolute bottom-6 left-0 right-0 flex justify-center space-x-2 transition-all duration-300 opacity-0 group-hover:opacity-100 group-hover:bottom-8"><a href="mailto:kevincriadop@gmail.com" class="social-link p-3 liquid-glass rounded-full hover:scale-110 transition-transform" aria-label="Email de Kevin"><i data-lucide="mail"></i></a><a href="https://wa.me/573195928589" target="_blank" rel="noopener noreferrer" class="social-link p-3 liquid-glass rounded-full hover:scale-110 transition-transform" aria-label="WhatsApp de Kevin"><i data-lucide="message-circle"></i></a><a href="https://www.linkedin.com" target="_blank" rel="noopener noreferrer" class="social-link p-3 liquid-glass rounded-full hover:scale-110 transition-transform" aria-label="LinkedIn de Kevin"><i data-lucide="linkedin"></i></a></div></div>
-                <div class="liquid-glass rounded-2xl p-6 text-center flex flex-col items-center author-card group overflow-hidden relative"><img src="https://i.ibb.co/3k5fHwM/rosa-daza.jpg" alt="Foto de Rosa María Daza Contreras" class="author-photo w-32 h-32 rounded-full object-cover mb-4 border-4 border-transparent" loading="lazy" decoding="async"><h3 class="text-2xl font-bold text-slate-100">Rosa María Daza Contreras</h3><p class="gradient-text font-semibold mb-2" data-translate-key="contactProfession">Psicóloga</p><p class="text-gray-300 italic text-sm mb-4 transition-opacity duration-300 group-hover:opacity-0" data-translate-key="contactQuote2">"Comprometida con la promoción del bienestar estudiantil y la prevención del desgaste profesional."</p><div class="absolute bottom-6 left-0 right-0 flex justify-center space-x-2 transition-all duration-300 opacity-0 group-hover:opacity-100 group-hover:bottom-8"><a href="mailto:rosaconda31@gmail.com" class="social-link p-3 liquid-glass rounded-full hover:scale-110 transition-transform" aria-label="Email de Rosa"><i data-lucide="mail"></i></a><a href="https://wa.me/573195928589" target="_blank" rel="noopener noreferrer" class="social-link p-3 liquid-glass rounded-full hover:scale-110 transition-transform" aria-label="WhatsApp de Rosa"><i data-lucide="message-circle"></i></a><a href="https://www.linkedin.com" target="_blank" rel="noopener noreferrer" class="social-link p-3 liquid-glass rounded-full hover:scale-110 transition-transform" aria-label="LinkedIn de Rosa"><i data-lucide="linkedin"></i></a></div></div>
+                <div class="liquid-glass rounded-2xl p-6 text-center flex flex-col items-center author-card group overflow-hidden relative"><img src="https://i.ibb.co/L8rXW72/kevin-criado.jpg" alt="Foto de Kevin Joel Criado Pérez" class="author-photo w-32 h-32 rounded-full object-cover mb-4 border-4 border-transparent" loading="lazy" decoding="async"><h3 class="text-2xl font-bold text-slate-100">Kevin Joel Criado Pérez</h3><p class="gradient-text font-semibold mb-2" data-translate-key="contactProfession">Psicólogo</p><p class="text-gray-300 italic text-sm mb-4 transition-opacity duration-300 group-hover:opacity-0" data-translate-key="contactQuote1">"Apasionado por comprender la dinámica de la salud mental en contextos de alta exigencia."</p><div class="absolute bottom-6 left-0 right-0 flex justify-center space-x-2 transition-all duration-300 opacity-0 group-hover:opacity-100 group-hover:bottom-8"><a href="mailto:kevincriadop@gmail.com" class="social-link p-3 liquid-glass rounded-full hover:scale-110 transition-transform" aria-label="Email de Kevin"><i data-lucide="mail"></i></a><a href="https://www.linkedin.com/in/kevin-criado/" target="_blank" rel="noopener noreferrer" class="social-link p-3 liquid-glass rounded-full hover:scale-110 transition-transform" aria-label="LinkedIn de Kevin"><i data-lucide="linkedin"></i></a><a href="https://www.facebook.com/kevinkriado" target="_blank" rel="noopener noreferrer" class="social-link p-3 liquid-glass rounded-full hover:scale-110 transition-transform" aria-label="Facebook de Kevin"><i data-lucide="facebook"></i></a><a href="https://instagram.com/kevinkriado" target="_blank" rel="noopener noreferrer" class="social-link p-3 liquid-glass rounded-full hover:scale-110 transition-transform" aria-label="Instagram de Kevin"><i data-lucide="instagram"></i></a></div></div>
+                <div class="liquid-glass rounded-2xl p-6 text-center flex flex-col items-center author-card group overflow-hidden relative"><img src="https://i.ibb.co/3k5fHwM/rosa-daza.jpg" alt="Foto de Rosa María Daza Contreras" class="author-photo w-32 h-32 rounded-full object-cover mb-4 border-4 border-transparent" loading="lazy" decoding="async"><h3 class="text-2xl font-bold text-slate-100">Rosa María Daza Contreras</h3><p class="gradient-text font-semibold mb-2" data-translate-key="contactProfession">Psicóloga</p><p class="text-gray-300 italic text-sm mb-4 transition-opacity duration-300 group-hover:opacity-0" data-translate-key="contactQuote2">"Comprometida con la promoción del bienestar estudiantil y la prevención del desgaste profesional."</p><div class="absolute bottom-6 left-0 right-0 flex justify-center space-x-2 transition-all duration-300 opacity-0 group-hover:opacity-100 group-hover:bottom-8"><a href="mailto:rosaconda31@gmail.com" class="social-link p-3 liquid-glass rounded-full hover:scale-110 transition-transform" aria-label="Email de Rosa"><i data-lucide="mail"></i></a></div></div>
             </div>
         </section>
     </main>
@@ -687,7 +696,6 @@
                     exitZenBtn: document.getElementById('exit-zen-btn'),
                     quiz: document.getElementById('wellness-quiz'),
                     wellnessResult: document.getElementById('wellness-result'),
-                    aiTipsContainer: document.getElementById('ai-tips-container'), // NUEVO: Contenedor para consejos de IA
                     glossaryModal: document.getElementById('glossary-modal'),
                     glossaryTitle: document.getElementById('glossary-title'),
                     glossaryDefinition: document.getElementById('glossary-definition'),
@@ -708,8 +716,7 @@
                     isTouchDevice: ('ontouchstart' in window) || (navigator.maxTouchPoints > 0),
                     scatterPlotData: null,
                     currentMythIndex: -1,
-                    mythAnswered: false,
-                    currentScore: null // NUEVO: Almacena la puntuación del termómetro
+                    mythAnswered: false
                 };
 
                 // --- DICCIONARIOS DE TRADUCCIÓN Y DATOS ---
@@ -947,12 +954,15 @@
                     if (index < 0 || index >= mythsData.length) return;
                     
                     const question = mythsData[index];
+
+                    const updateText = () => {
+                        dom.quizStatement.textContent = question[`statement_${state.lang}`];
+                        dom.quizStatement.classList.remove('loading');
+                    };
+
                     if (isNewQuestion) {
-                        dom.quizStatement.style.opacity = 0;
-                        setTimeout(() => {
-                            dom.quizStatement.textContent = question[`statement_${state.lang}`];
-                            dom.quizStatement.style.opacity = 1;
-                        }, 200);
+                        dom.quizStatement.classList.add('loading');
+                        setTimeout(updateText, 300);
                     } else {
                         dom.quizStatement.textContent = question[`statement_${state.lang}`];
                     }
@@ -978,7 +988,7 @@
                 const loadNextMythQuestion = () => {
                     state.currentMythIndex = (state.currentMythIndex + 1) % mythsData.length;
                     state.mythAnswered = false;
-                    renderMythQuestion(state.currentMythIndex);
+                    renderMythQuestion(state.currentMythIndex, true);
                 };
 
                 const handleQuizAnswer = (e) => {
@@ -1006,58 +1016,6 @@
                     dom.quizNextBtn.classList.remove('hidden');
                 };
 
-                // --- NUEVO: LÓGICA DE LA API DE GEMINI ---
-                const getAITips = async () => {
-                    if (state.currentScore === null) return;
-                    
-                    const tipsContainer = dom.aiTipsContainer;
-                    tipsContainer.innerHTML = `<div class="flex items-center justify-center gap-2 text-gray-400"><i data-lucide="loader" class="loader"></i><p>Generando consejos personalizados...</p></div>`;
-                    lucide.createIcons();
-
-                    let levelDescription;
-                    if (state.currentScore <= 1) {
-                        levelDescription = "un nivel bajo de burnout, indicando un buen equilibrio.";
-                    } else if (state.currentScore <= 4) {
-                        levelDescription = "un nivel moderado de burnout, con algunas señales de alerta.";
-                    } else {
-                        levelDescription = "un nivel alto de burnout, con un desgaste considerable.";
-                    }
-                    
-                    const prompt = `Eres un consejero de bienestar estudiantil empático y experto. Un estudiante de psicología ha indicado ${levelDescription} Basado en esto, genera una lista corta (3-4 puntos clave) de consejos prácticos, accionables y alentadores. Enfócate en pasos pequeños que pueda tomar de inmediato. Usa un tono de apoyo y evita lenguaje clínico complejo. Formatea la respuesta como una lista de viñetas (usando '*' o '-'). Responde en español.`;
-
-                    try {
-                        const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
-                        const apiKey = ""; // Se deja en blanco según las instrucciones
-                        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-
-                        const response = await fetch(apiUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        });
-
-                        if (!response.ok) {
-                            throw new Error(`Error en la API: ${response.statusText}`);
-                        }
-
-                        const result = await response.json();
-                        
-                        if (result.candidates && result.candidates.length > 0 &&
-                            result.candidates[0].content && result.candidates[0].content.parts &&
-                            result.candidates[0].content.parts.length > 0) {
-                            const text = result.candidates[0].content.parts[0].text;
-                            // Formatear el texto como una lista HTML
-                            const formattedText = '<ul>' + text.trim().split(/[\n*•-]/).filter(item => item.trim() !== '').map(item => `<li>${item.trim()}</li>`).join('') + '</ul>';
-                            tipsContainer.innerHTML = `<h4 class="font-bold text-lg mb-2 text-slate-100">Sugerencias Personalizadas para Ti:</h4>${formattedText}`;
-                        } else {
-                            throw new Error("Respuesta inesperada de la API.");
-                        }
-                    } catch (error) {
-                        console.error("Error al obtener consejos de la IA:", error);
-                        tipsContainer.innerHTML = `<p class="text-red-400">Lo sentimos, no se pudieron generar los consejos en este momento. Por favor, inténtalo de nuevo más tarde.</p>`;
-                    }
-                };
-
                 // --- MANEJO DE EVENTOS (EVENT HANDLING) ---
 
                 const handleControlsClick = (e) => {
@@ -1070,9 +1028,6 @@
                         toggleZenMode();
                     } else if (button.id.includes('lang-toggle')) {
                         setLanguage(state.lang === 'es' ? 'en' : 'es');
-                    } else if (button.id === 'get-ai-tips-btn') { // NUEVO: Evento para el botón de IA
-                        getAITips();
-                        button.disabled = true; // Desactivar después del primer clic
                     }
                 };
                 
@@ -1090,6 +1045,7 @@
                 // --- INICIALIZACIÓN DE LA APLICACIÓN ---
 
                 const init = () => {
+                    // Carga inicial y preloader
                     window.addEventListener('load', () => {
                         if (dom.preloader) {
                             dom.preloader.style.opacity = '0';
@@ -1097,8 +1053,10 @@
                         }
                     }, { once: true });
 
+                    // Configuración inicial de UI
                     if (state.isTouchDevice && dom.aurora) dom.aurora.style.display = 'none';
                     
+                    // Event Listeners
                     if (!state.isTouchDevice && dom.aurora) {
                         window.addEventListener('mousemove', (e) => { 
                             dom.aurora.style.left = `${e.clientX}px`; 
@@ -1137,11 +1095,13 @@
                         });
                     }
 
+                    // Observadores de Intersección para animaciones
                     const fadeInObserver = new IntersectionObserver((entries, observer) => {
                         entries.forEach(entry => {
                             if (entry.isIntersecting) {
                                 entry.target.classList.add('is-visible');
                                 
+                                // Animar barras de progreso
                                 entry.target.querySelectorAll('.finding-item').forEach(item => {
                                     const bar = item.querySelector('.progress-bar');
                                     if(bar) {
@@ -1171,9 +1131,10 @@
                                 document.querySelectorAll(`.nav-link[data-nav-link="${id}"]`).forEach(activeLink => activeLink.classList.add('nav-active'));
                             }
                         });
-                    }, { rootMargin: "-50% 0px -50% 0px", threshold: 0.5 });
+                    }, { rootMargin: "-40% 0px -40% 0px", threshold: 0.5 });
                     document.querySelectorAll('main > section').forEach(section => navObserver.observe(section));
 
+                    // Animación de burbujas
                     if (dom.bubbleContainer) setInterval(() => {
                         const bubble = document.createElement('div');
                         const size = Math.random() * 150 + 50;
@@ -1192,6 +1153,7 @@
                         setTimeout(() => bubble.remove(), 40000);
                     }, 800);
 
+                    // Cuestionario de Bienestar
                     if (dom.quiz) {
                         dom.quiz.addEventListener('change', (e) => {
                             document.querySelectorAll(`input[name="${e.target.name}"]`).forEach(radio => radio.parentElement.classList.remove('selected'));
@@ -1203,8 +1165,7 @@
 
                             if (q1 && q2 && q3) {
                                 const score = parseInt(q1.value) + parseInt(q2.value) + parseInt(q3.value);
-                                state.currentScore = score; // Almacenar puntuación
-                                let resultText, resultColor, resultTitle, resultIcon, aiButtonText;
+                                let resultText, resultColor, resultTitle, resultIcon;
                                 const percentage = (score / 6) * 100;
                                 
                                 if (score <= 1) {
@@ -1220,7 +1181,6 @@
                                     resultText = state.lang === 'es' ? 'Nivel de desgaste considerable. Es un buen momento para buscar apoyo activamente.' : 'Considerable level of burnout. It\'s a good time to actively seek support.';
                                     resultColor = `hsl(0, 80%, 60%)`; resultIcon = 'shield-alert';
                                 }
-                                aiButtonText = state.lang === 'es' ? 'Obtener Consejos con IA' : 'Get AI Tips';
                                 
                                 if(dom.wellnessResult) {
                                     dom.wellnessResult.innerHTML = `
@@ -1236,9 +1196,6 @@
                                                 </div>
                                             </div>
                                             <p class="text-gray-400 mt-4 text-sm text-center animate-title-word" style="animation-delay: 0.4s;">${resultText}</p>
-                                            <button id="get-ai-tips-btn" class="mt-4 liquid-glass font-semibold py-2 px-4 rounded-xl flex items-center space-x-2 theme-button hover:scale-105 text-sm">
-                                                <i data-lucide="sparkles" class="w-4 h-4"></i><span>${aiButtonText}</span>
-                                            </button>
                                         </div>`;
                                     setTimeout(() => {
                                         const animatedPath = dom.wellnessResult.querySelector('path.stroke-current:not(.text-gray-700)');
@@ -1246,21 +1203,19 @@
                                     }, 100);
                                     lucide.createIcons();
                                     dom.wellnessResult.classList.remove('opacity-50');
-                                    // Añadir el listener al nuevo botón de IA
-                                    document.getElementById('get-ai-tips-btn').addEventListener('click', handleControlsClick);
                                 }
-                                dom.aiTipsContainer.innerHTML = ''; // Limpiar consejos anteriores
                             }
                         });
                     }
 
+                    // Inicializar estado y renderizar
                     lucide.createIcons();
                     setLanguage(state.lang);
                     applyTheme(state.theme);
                     setupSocialSharing();
                 };
 
-                init();
+                init(); // Ejecutar la aplicación
             });
         })();
     </script>
