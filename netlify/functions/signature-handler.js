@@ -17,114 +17,93 @@ exports.handler = async (event, context) => {
         const data = JSON.parse(event.body);
 
         // 1. Obtener Variables de Entorno (Credenciales de Zoho)
-        const ZOHO_USER = process.env.ZOHO_USER;
-        const ZOHO_PASS = process.env.ZOHO_PASS;
+        const ZOHO_USER = process.env.ZOHO_USER; // psicologia@kevincriado.com
+        const ZOHO_PASS = process.env.ZOHO_PASS; // Contraseña de Aplicación de Zoho
 
         if (!ZOHO_USER || !ZOHO_PASS) {
             console.error("Faltan variables de entorno ZOHO_USER o ZOHO_PASS.");
             return {
                 statusCode: 500,
-                body: JSON.stringify({ message: "Error de configuración: Faltan credenciales del servidor de correo." }),
+                body: JSON.stringify({ success: false, message: "Error de configuración: Faltan credenciales del servidor de correo." }),
             };
         }
 
-        // 2. Configurar el Transportador de Nodemailer (Zoho Mail)
+        // 2. Configurar el Transportador de Nodemailer (Zoho Mail) - Usando 587/TLS
         let transporter = nodemailer.createTransport({
             host: 'smtp.zoho.com', // Servidor SMTP de Zoho
-            port: 465, // Puerto seguro
-            secure: true, // Usar SSL/TLS
+            port: 587, // Puerto estándar para TLS/STARTTLS
+            secure: false, // TLS se maneja con STARTTLS en el puerto 587 (secure: false)
+            requireTLS: true, // Forzar el uso de TLS
             auth: {
                 user: ZOHO_USER,
                 pass: ZOHO_PASS
             }
         });
 
-        // **PASO DE DIAGNÓSTICO:** Verificar la conexión SMTP (Si falla aquí, el error es de ZOHO_PASS)
-        await transporter.verify();
-        console.log("Conexión SMTP con Zoho establecida exitosamente.");
+        // 3. Extracción de datos del Payload
+        const isMinor = data.type === 'MENOR_DE_EDAD';
+        const patientName = data.paciente.nombre;
+        const patientEmail = data.paciente.email;
+        const legalRepresentativeName = data.representante ? data.representante.nombre : data.paciente.nombre;
+        const legalRepresentativeEmail = data.representante ? data.representante.email : data.paciente.email;
 
-        // 3. Extracción de datos
-        const {
-            patientName, patientEmail, patientDocumentType, patientDocumentNumber, patientPhone,
-            patientSignature, legalRepresentativeName, legalRepresentativeDocumentType, 
-            legalRepresentativeDocumentNumber, legalRepresentativePhone, legalRepresentativeSignature,
-            isMinor, minorName, minorDocumentType, minorDocumentNumber, minorAssentSignature,
-            documentType, pdfBase64,
-            currentDate, currentTime
-        } = data;
+        // --- Extracción y Limpieza de Firmas para Adjuntos ---
+        const legalSignatureBase64 = data.representante ? data.representante.firma : data.paciente.firma;
+        const minorAssentSignatureBase64 = data.representante ? data.paciente.firma : null;
         
-        // --- Comienza la construcción del correo ---
+        // Asunto y Mensaje
+        const subject = `[FIRMA VÁLIDA] Documentos Clínicos Firmados por ${legalRepresentativeName}`;
         
-        // 4. Construcción del cuerpo del correo y los adjuntos
-        // Reconstrucción del nombre del documento para el adjunto
-        // Se usa `legalRepresentativeName` como respaldo si `patientName` no está disponible
-        const docName = (patientName || legalRepresentativeName).replace(/ /g, '_');
-        const documentFileName = `${documentType.replace(/ /g, '_')}_${docName}_${currentDate.replace(/\//g, '-')}.pdf`;
+        let htmlBody = `
+            <h2>¡Documentación Clínica Firmada y Custodiada!</h2>
+            <p><strong>Fecha de Transacción:</strong> ${new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota' })}</p>
+            <p>El sistema ha recibido y validado la firma digital de los siguientes documentos: Consentimiento Informado, Autorización de Tratamiento de Datos Personales y apertura de Historia Clínica.</p>
+            
+            <h3>Datos del Firmante Principal (${isMinor ? 'Representante Legal' : 'Paciente Adulto'})</h3>
+            <ul>
+                <li><strong>Nombre Completo:</strong> ${legalRepresentativeName}</li>
+                <li><strong>Documento:</strong> ${data.representante ? data.representante.documento : data.paciente.documento}</li>
+                <li><strong>Correo:</strong> ${legalRepresentativeEmail}</li>
+                <li><strong>Teléfono:</strong> ${data.representante ? data.representante.telefono : data.paciente.telefono}</li>
+            </ul>
+        `;
 
-        const mailOptions = {
-            from: `Kevin Criado Psicología <${ZOHO_USER}>`,
-            to: ZOHO_USER, // El correo de Kevin
-            subject: `[FIRMA DIGITAL] Nuevo Documento: ${documentType} - ${patientName || legalRepresentativeName}`,
-            html: `
-                <h2>Documento Firmado Digitalmente</h2>
-                <p><strong>Tipo de Documento:</strong> ${documentType}</p>
-                <p><strong>Fecha y Hora de Firma:</strong> ${currentDate} - ${currentTime}</p>
-                
-                <h3>Datos del Consultante</h3>
+        let attachments = [
+            // Firma Principal (Adulto o Representante Legal)
+            {
+                filename: `firma_principal_${legalRepresentativeName.replace(/ /g, '_')}.png`,
+                content: legalSignatureBase64.split(';base64,').pop(),
+                encoding: 'base64',
+                cid: 'legalSignature',
+            },
+        ];
+
+        if (isMinor) {
+            htmlBody += `
+                <h3>Asentimiento del Menor de Edad</h3>
                 <ul>
-                    <li><strong>Nombre:</strong> ${patientName || 'N/A'}</li>
-                    <li><strong>Correo:</strong> ${patientEmail || 'N/A'}</li>
-                    <li><strong>Documento:</strong> ${patientDocumentType || 'N/A'} ${patientDocumentNumber || 'N/A'}</li>
-                    <li><strong>Teléfono:</strong> ${patientPhone || 'N/A'}</li>
+                    <li><strong>Nombre del Menor:</strong> ${data.paciente.nombre}</li>
+                    <li><strong>Documento del Menor:</strong> ${data.paciente.documento}</li>
                 </ul>
-                
-                ${isMinor ? `
-                    <h3>Datos del Representante Legal y Menor</h3>
-                    <ul>
-                        <li><strong>Representante Legal:</strong> ${legalRepresentativeName || 'N/A'}</li>
-                        <li><strong>Documento R.L.:</strong> ${legalRepresentativeDocumentType || 'N/A'} ${legalRepresentativeDocumentNumber || 'N/A'}</li>
-                        <li><strong>Teléfono R.L.:</strong> ${legalRepresentativePhone || 'N/A'}</li>
-                        <li><strong>Menor de Edad:</strong> ${minorName || 'N/A'}</li>
-                        <li><strong>Documento Menor:</strong> ${minorDocumentType || 'N/A'} ${minorDocumentNumber || 'N/A'}</li>
-                    </ul>
-                ` : ''}
+            `;
+            // Adjunto: Firma del Menor (Asentimiento)
+            attachments.push({
+                filename: `firma_asentimiento_${data.paciente.nombre.replace(/ /g, '_')}.png`,
+                content: minorAssentSignatureBase64.split(';base64,').pop(),
+                encoding: 'base64',
+                cid: 'minorAssentSignature',
+            });
+        }
 
-                <h3>Firmas</h3>
-                <p>Las firmas adjuntas en el PDF están verificadas por el sistema.</p>
-                
-                <hr>
-                <p><strong>Nota:</strong> El PDF adjunto contiene el documento firmado con validez legal.</p>
-            `,
-            attachments: [
-                // Adjunto principal: El documento PDF serializado
-                {
-                    filename: documentFileName,
-                    content: pdfBase64.split(';base64,').pop(), 
-                    encoding: 'base64',
-                    contentType: 'application/pdf',
-                },
-                // Firmas adjuntas como imágenes (para el cuerpo del correo o referencia)
-                // Usamos CID para incrustar la imagen en el correo si el front-end lo hiciera, pero aquí solo la adjuntamos para referencia.
-                {
-                    filename: 'firma_paciente.png',
-                    content: (patientSignature || '').split(';base64,').pop(),
-                    encoding: 'base64',
-                    cid: 'patientSignature',
-                },
-                ...(isMinor && legalRepresentativeSignature ? [{
-                    filename: 'firma_acudiente.png',
-                    content: legalRepresentativeSignature.split(';base64,').pop(),
-                    encoding: 'base64',
-                    cid: 'legalRepresentativeSignature',
-                }] : []),
-                // Si el paciente es menor, la "patientSignature" es el asentimiento del menor
-                ...(isMinor && minorAssentSignature ? [{
-                    filename: 'firma_asentimiento_menor.png',
-                    content: minorAssentSignature.split(';base64,').pop(),
-                    encoding: 'base64',
-                    cid: 'minorAssentSignature',
-                }] : []),
-            ]
+
+        // 4. Definir Opciones del Correo (Para Kevin)
+        let mailOptions = {
+            from: `Kevin Criado Psicología <${ZOHO_USER}>`, 
+            to: 'kevincriadop@gmail.com', // Destino fijo de Kevin
+            subject: subject,
+            html: htmlBody,
+            replyTo: legalRepresentativeEmail,
+            attachments: attachments
         };
 
         // 5. Envío del correo a Kevin
@@ -132,28 +111,26 @@ exports.handler = async (event, context) => {
         console.log("Mensaje enviado a Kevin: %s", info.messageId);
 
         // 6. Envío de confirmación al Cliente (Copia al paciente/representante)
-        const recipientEmail = patientEmail || legalRepresentativePhone; // Usar el email del paciente o acudiente
-        const recipientName = patientName || legalRepresentativeName;
+        const recipientEmailForCopy = legalRepresentativeEmail;
         
-        if (recipientEmail) {
+        if (recipientEmailForCopy) {
             const confirmationMail = {
                 from: `Kevin Criado Psicología <${ZOHO_USER}>`,
-                to: recipientEmail, // Dirección del paciente/acudiente
-                subject: "Confirmación de Documentos Firmados Digitalmente",
+                to: recipientEmailForCopy, 
+                subject: "Copia de Seguridad: Confirmación de Documentos Firmados",
                 html: `
                     <h2>¡Proceso de Firma Digital Completado Exitosamente!</h2>
-                    <p>Estimado(a) ${recipientName || 'Consultante'},</p>
-                    <p>Confirmamos que tus documentos de consentimiento y autorización han sido firmados digitalmente con éxito y se han guardado de forma segura.</p>
-                    <p>Pronto recibirás una copia final de todos los documentos.</p>
+                    <p>Estimado(a) ${legalRepresentativeName},</p>
+                    <p>Confirmamos que tus documentos de consentimiento y autorización han sido firmados digitalmente. <strong>Esta es tu copia de seguridad.</strong></p>
+                    <p>Si tienes alguna pregunta, no dudes en contactarme.</p>
                     <br>
                     <p>Atentamente,</p>
                     <p>Kevin Criado Pérez - Psicólogo</p>
                 `
             };
             await transporter.sendMail(confirmationMail);
-            console.log("Confirmación enviada a: %s", recipientEmail);
+            console.log("Confirmación enviada a: %s", recipientEmailForCopy);
         }
-
 
         // 7. Respuesta de éxito a la aplicación web
         return {
@@ -164,11 +141,13 @@ exports.handler = async (event, context) => {
     } catch (error) {
         console.error("Error al procesar la solicitud:", error);
         
-        // Si el error es de autenticación, lo hacemos más explícito en la respuesta (si Netlify lo permite)
         let errorMessage = "Error interno del servidor al enviar el correo.";
-        if (error.message && error.message.includes('auth')) {
-             errorMessage = "Fallo de autenticación de correo. Revise ZOHO_USER y ZOHO_PASS (Contraseña de Aplicación) en Netlify.";
+        if (error.message && (error.message.includes('Auth') || error.message.includes('535'))) {
+             errorMessage = "Fallo de autenticación: Verifique ZOHO_PASS (Contraseña de Aplicación) en Netlify.";
+        } else if (error.message && error.message.includes('ECONNREFUSED')) {
+             errorMessage = "Fallo de conexión: El servidor SMTP de Zoho rechazó la conexión. Intente con el puerto 465 (SSL) si el 587 no funciona.";
         }
+        
         return {
             statusCode: 500,
             body: JSON.stringify({ success: false, message: errorMessage, error: error.message }),
