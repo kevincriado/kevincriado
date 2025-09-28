@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Validación y Firma de Documentos Clínicos</title>
+    <!-- Incluye Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Incluye la librería de Signature Pad desde un CDN -->
+    <script src="https://unpkg.com/signature_pad"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* Estilos base copiados de la web de políticas */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a1a2e; /* Base color oscuro */
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+        
+        /* Barra de Progreso */
+        #progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #EC008C, #00AEEF, #00A99D);
+            background-size: 200%;
+            width: 0%;
+            z-index: 100;
+            transition: width 0.2s ease-out;
+            animation: move-gradient 4s linear infinite;
+        }
+        @keyframes move-gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Efecto de Cristal */
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+
+        /* Burbujas de fondo */
+        .blobs-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; z-index: -1; }
+        .blob { position: absolute; border-radius: 50%; opacity: 0.6; filter: blur(80px); }
+        .blob-1 { width: 400px; height: 400px; background: #EC008C; animation: move-blob-1 25s infinite alternate; }
+        .blob-2 { width: 500px; height: 500px; background: #00AEEF; animation: move-blob-2 30s infinite alternate; }
+        .blob-3 { width: 350px; height: 350px; background: #00A99D; animation: move-blob-3 20s infinite alternate; }
+        @keyframes move-blob-1 { from { transform: translate(0vw, 0vh) rotate(0deg); } to { transform: translate(50vw, 60vh) rotate(360deg); } }
+        @keyframes move-blob-2 { from { transform: translate(80vw, 10vh) rotate(0deg); } to { transform: translate(10vw, 80vh) rotate(-360deg); } }
+        @keyframes move-blob-3 { from { transform: translate(20vw, 70vh) rotate(0deg); } to { transform: translate(70vw, 10vh) rotate(180deg); } }
+
+        /* Tipografía y Estilos de Contenido */
+        .prose-style {
+            font-size: 1.0rem;
+            line-height: 1.6;
+            color: rgba(233, 213, 255, 0.95);
+        }
+        .norm-link { /* Enlaces interactivos para normas, copiados de la web de políticas */
+            cursor: pointer; 
+            font-weight: 600; 
+            color: #00AEEF; 
+            border-bottom: 2px dotted rgba(0, 174, 239, 0.5); 
+            transition: color 0.3s, border-color 0.3s; 
+        }
+        .norm-link:hover { color: #fff; border-color: #fff; }
+
+        /* Canvas y Overlays */
+        canvas {
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            background-color: rgba(255, 255, 255, 0.1);
+            touch-action: none;
+        }
+        .canvas-container { position: relative; }
+        .canvas-overlay { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0, 0, 0, 0.5); display: flex; align-items: center; 
+            justify-content: center; border-radius: 0.5rem; text-align: center; 
+            padding: 1rem; transition: opacity 0.3s ease-in-out; opacity: 1; 
+            cursor: not-allowed; z-index: 10;
+        }
+        
+        /* Modales */
+        .modal-overlay { transition: opacity 0.3s ease-in-out; }
+        .modal-container { transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out; }
+        .hidden-section { display: none; }
+
+        /* NUEVOS ESTILOS PARA EL SELECTOR DE EDAD */
+        .radio-card {
+            position: relative;
+            cursor: pointer;
+            padding: 1rem;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+        .radio-card input {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .radio-card:hover {
+            border-color: #00AEEF; /* Cian al pasar el mouse */
+            background: rgba(0, 174, 239, 0.1);
+            transform: translateY(-2px);
+        }
+        .radio-card input:checked + div {
+            border-color: #EC008C; /* Magenta al seleccionar */
+            background: rgba(236, 0, 140, 0.1);
+            box-shadow: 0 0 10px rgba(236, 0, 140, 0.5);
+            transform: scale(1.01);
+        }
+        .radio-card input:checked + div .check-icon {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="antialiased relative">
+    <div id="progress-bar"></div>
+    <!-- Fondos decorativos animados -->
+    <div class="blobs-container">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+    
+    <!-- Contenedor principal del formulario -->
+    <div class="relative z-10 flex items-center justify-center min-h-screen p-4">
+        <div id="signature-card" class="glass-effect p-8 rounded-2xl w-full max-w-xl mx-auto">
+            <h1 class="text-3xl md:text-4xl font-extrabold text-center text-white mb-2">Validación y Firma de Documentos Clínicos</h1>
+            
+            <!-- DESCRIPCIÓN LEGAL CON ENLACES INTERACTIVOS Y TEXTO LIMPIO -->
+            <p class="text-center prose-style mb-6 text-sm">
+                Al proceder con su firma digital, usted valida y acepta de manera integral el Consentimiento Informado, la Autorización de Tratamiento de Datos Personales (<span class="norm-link" data-norm="ley-1581">Ley 1581 de 2012</span>) y la apertura de su Historia Clínica (<span class="norm-link" data-norm="res-3100">Res. 3100 de 2019</span>). Este acto garantiza la plena validez legal de su firma electrónica (<span class="norm-link" data-norm="ley-527">Ley 527 de 1999</span> y <span class="norm-link" data-norm="ley-2213">Ley 2213 de 2022</span>).
+                <br><br>
+                Nota sobre Autorizaciones Opcionales: Su firma en este formulario valida únicamente el Consentimiento Informado, la Autorización de Tratamiento de Datos Personales y la Historia Clínica. La Autorización de Grabación y la de Transcripción son acuerdos opcionales que se formalizarán verbalmente durante su sesión, si aplica.
+                <br><br>
+                Custodia de la Firma: Su trazo digital se captura como evidencia legal, se encripta, y es enviado inmediatamente como archivo PNG al profesional para su custodia segura por 15 años en su Historia Clínica (<span class="norm-link" data-norm="res-1995">Res. 1995 de 1999</span>). Una copia de la firma generada también será enviada al correo electrónico que registre en este formulario.
+            </p>
+
+            <!-- Selector de Edad/Tipo de Paciente (RENOVADO) -->
+            <div class="mb-8">
+                <label class="block text-base font-semibold text-white/90 mb-3">Seleccione el Tipo de Paciente:</label>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    
+                    <!-- Tarjeta Adulto -->
+                    <label class="radio-card glass-effect rounded-xl">
+                        <input type="radio" name="patient_type" value="adult" id="type-adult" checked onchange="toggleSections()">
+                        <div class="flex items-center space-x-3">
+                            <span class="w-6 h-6 flex items-center justify-center rounded-full border border-white/50 check-icon transition-opacity" style="border-color: inherit;">
+                                <svg class="w-4 h-4 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                            </span>
+                            <span class="font-medium text-lg">Adulto Legal (18+ años)</span>
+                        </div>
+                        <p class="text-sm text-white/70 mt-1">Firma el paciente, responsable de sus propios datos.</p>
+                    </label>
+
+                    <!-- Tarjeta Menor -->
+                    <label class="radio-card glass-effect rounded-xl">
+                        <input type="radio" name="patient_type" value="minor" id="type-minor" onchange="toggleSections()">
+                        <div class="flex items-center space-x-3">
+                             <span class="w-6 h-6 flex items-center justify-center rounded-full border border-white/50 check-icon opacity-0 transition-opacity" style="border-color: inherit;">
+                                <svg class="w-4 h-4 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                            </span>
+                            <span class="font-medium text-lg">Menor de Edad</span>
+                        </div>
+                        <p class="text-sm text-white/70 mt-1">Requiere firma del Representante Legal (Padre/Tutor) y asentimiento del menor.</p>
+                    </label>
+                </div>
+            </div>
+
+            <!-- SECCIÓN 1: ADULTO (o Paciente Menor) -->
+            <div id="section-patient-details" class="mb-8">
+                <h2 class="text-xl font-bold text-pink-300 mb-4 border-b border-pink-500/50 pb-2">Datos y Firma del Paciente</h2>
+
+                <!-- Campos Comunes (Adulto / Menor) -->
+                <div class="space-y-4 mb-4">
+                    <div>
+                        <label for="patient-full-name" class="block text-sm font-medium text-white/80 mb-1">Nombre Completo:</label>
+                        <input type="text" id="patient-full-name" class="required-field patient-field w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200" placeholder="Nombre completo del paciente">
+                    </div>
+                    <div>
+                        <label for="patient-document" class="block text-sm font-medium text-white/80 mb-1">Documento:</label>
+                        <input type="text" id="patient-document" class="required-field patient-field w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200" placeholder="Documento de identidad del paciente">
+                    </div>
+                    
+                    <!-- Campos de Contacto (Solo para Adultos, se ocultan para Menores) -->
+                    <div id="patient-contact-fields">
+                        <div>
+                            <label for="patient-phone" class="block text-sm font-medium text-white/80 mb-1">Teléfono:</label>
+                            <input type="tel" id="patient-phone" class="required-field patient-field w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200" placeholder="Número de teléfono (WhatsApp)">
+                        </div>
+                        <div>
+                            <label for="patient-email" class="block text-sm font-medium text-white/80 mb-1">Correo Electrónico:</label>
+                            <input type="email" id="patient-email" class="required-field patient-field w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200" placeholder="Correo electrónico del paciente">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Firma del Paciente (Adulto o Menor) -->
+                <div class="mb-4 canvas-container" id="patient-canvas-container">
+                    <label for="signature-canvas-patient" class="block text-sm font-medium text-white/80 mb-2">Firma del Paciente (Asentimiento para Menores):</label>
+                    <canvas id="signature-canvas-patient" class="w-full h-48 rounded-md cursor-crosshair"></canvas>
+                    <div id="patient-canvas-overlay" class="canvas-overlay glass-effect">
+                        <p class="text-white/80 text-center font-semibold">Llena los campos de texto del paciente para habilitar la firma.</p>
+                    </div>
+                    <div class="flex justify-end mt-2 space-x-2">
+                        <button id="clear-button-patient" class="px-3 py-1 text-sm font-medium text-white/80 bg-red-600/20 rounded-md hover:bg-red-600/40 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200">
+                            Borrar Firma
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECCIÓN 2: REPRESENTANTE LEGAL (Solo para Menores) -->
+            <div id="section-legal-rep" class="hidden-section mb-8">
+                <h2 class="text-xl font-bold text-cyan-300 mb-4 border-b border-cyan-500/50 pb-2">Datos y Firma del Representante Legal (Padre/Tutor)</h2>
+
+                <div class="space-y-4 mb-4">
+                    <div>
+                        <label for="legal-name" class="block text-sm font-medium text-white/80 mb-1">Nombre Completo:</label>
+                        <input type="text" id="legal-name" class="required-field legal-field w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200" placeholder="Nombre del padre, madre o tutor">
+                    </div>
+                    <div>
+                        <label for="legal-document" class="block text-sm font-medium text-white/80 mb-1">Documento:</label>
+                        <input type="text" id="legal-document" class="required-field legal-field w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200" placeholder="Documento de identidad del representante">
+                    </div>
+                    <div>
+                        <label for="legal-phone" class="block text-sm font-medium text-white/80 mb-1">Teléfono:</label>
+                        <input type="tel" id="legal-phone" class="required-field legal-field w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200" placeholder="Número de teléfono (WhatsApp)">
+                    </div>
+                    <div>
+                        <label for="legal-email" class="block text-sm font-medium text-white/80 mb-1">Correo Electrónico:</label>
+                        <input type="email" id="legal-email" class="required-field legal-field w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200" placeholder="Correo electrónico del representante">
+                    </div>
+                </div>
+
+                <!-- Firma del Representante Legal -->
+                <div class="mb-4 canvas-container" id="legal-canvas-container">
+                    <label for="signature-canvas-legal" class="block text-sm font-medium text-white/80 mb-2">Firma del Representante Legal:</label>
+                    <canvas id="signature-canvas-legal" class="w-full h-48 rounded-md cursor-crosshair"></canvas>
+                    <div id="legal-canvas-overlay" class="canvas-overlay glass-effect">
+                        <p class="text-white/80 text-center font-semibold">Llena los campos de texto del representante legal para habilitar la firma.</p>
+                    </div>
+                    <div class="flex justify-end mt-2 space-x-2">
+                        <button id="clear-button-legal" class="px-3 py-1 text-sm font-medium text-white/80 bg-red-600/20 rounded-md hover:bg-red-600/40 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200">
+                            Borrar Firma
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Botón de Envío -->
+            <div class="flex justify-center mt-6">
+                <button id="generate-signature-button" class="w-full flex items-center justify-center px-4 py-3 border border-transparent text-base font-bold rounded-full text-purple-700 bg-white hover:bg-purple-100 transition-all duration-300 transform hover:scale-105 shadow-lg">
+                    <span id="button-text">Generar Firma y Enviar Documentos</span>
+                </button>
+            </div>
+
+            <!-- Contenedor para mensajes de estado -->
+            <div id="status-message" class="mt-4 text-center"></div>
+        </div>
+    </div>
+    
+    <!-- Modales para las advertencias (local) -->
+    <div id="modal-overlay" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden opacity-0">
+        <div class="modal-container glass-effect w-full max-w-sm p-6 rounded-2xl text-center opacity-0 -translate-y-10">
+            <h3 id="modal-title" class="text-2xl font-bold mb-4">Advertencia</h3>
+            <p id="modal-text" class="prose-style mb-6"></p>
+            <button id="modal-close" class="bg-red-600/20 text-white/80 font-semibold px-4 py-2 rounded-full hover:bg-red-600/40 transition-colors duration-200">
+                Aceptar
+            </button>
+        </div>
+    </div>
+
+    <!-- Modales de Normatividad (Copiados de la web de Políticas) -->
+    <div id="norm-modal" class="modal-overlay fixed inset-0 z-[100] bg-black bg-opacity-70 flex items-center justify-center p-4 hidden opacity-0">
+        <div class="modal-container glass-effect w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 md:p-8 rounded-2xl opacity-0 -translate-y-10">
+            <div class="flex justify-between items-center mb-6"><h2 id="norm-modal-title" class="text-xl md:text-2xl font-bold"></h2><button id="norm-modal-close-btn" class="text-white text-4xl font-light leading-none hover:text-gray-300 transition-colors">&times;</button></div>
+            <div id="norm-modal-content" class="prose-style text-base"></div>
+            <!-- Enlace simulado al PDF del documento -->
+            <div class="mt-8 text-center"><a id="norm-modal-link" href="#" target="_blank" rel="noopener noreferrer" class="bg-white text-purple-700 font-bold px-6 py-3 rounded-full hover:bg-purple-100 transition-all duration-300 transform hover:scale-105 inline-block shadow-lg">Ver Documento Completo</a></div>
+        </div>
+    </div>
+    
+    <!-- Contenido Oculto para Modales de Normatividad -->
+    <div class="hidden">
+        <div id="norm-content-container">
+            <!-- La firma valida: Ley 1581 (Tratamiento de Datos), Res. 3100 (HC), Ley 527 y 2213 (Validez) y Res. 1995 (Custodia) -->
+            <div id="ley-1581"><h3>Ley 1581 de 2012</h3><p><strong>Resumen:</strong> Es la Ley de Protección de Datos Personales (Habeas Data). Te otorga el control total sobre tu información. Gracias a ella, tienes derecho a conocer, actualizar, corregir y solicitar la eliminación de tus datos. Me obliga a pedirte autorización para usar tu información y a protegerla adecuadamente.</p><a href="https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=49981"></a></div>
+            <div id="res-3100"><h3>Resolución 3100 de 2019</h3><p><strong>Resumen:</strong> Establece los procedimientos y condiciones de habilitación de los prestadores de servicios de salud. Para ti, garantiza que el proceso de apertura y gestión de tu Historia Clínica (incluyendo su firma digital) cumple con los estándares de calidad del Ministerio de Salud, asegurando un registro profesional y legal.</p><a href="https://www.minsalud.gov.co/normatividad_nuevo/resolución%20no.%203100%20de%202019.pdf"></a></div>
+            <div id="ley-527"><h3>Ley 527 de 1999</h3><p><strong>Resumen:</strong> Define y reglamenta el acceso y uso de los mensajes de datos y de las firmas digitales. Es la base legal que asegura que tu firma digital tiene la misma validez y efectos jurídicos que un documento físico firmado a mano.</p><a href="http://www.secretariasenado.gov.co/senado/basedoc/ley_0527_1999.html"></a></div>
+            <div id="ley-2213"><h3>Ley 2213 de 2022</h3><p><strong>Resumen:</strong> Otorga plenos efectos jurídicos a la virtualidad en la justicia. Refuerza la Ley 527, confirmando que las firmas y documentos electrónicos son herramientas legales válidas, facilitando la seguridad en entornos como la telepsicología.</p><a href="http://www.secretariasenado.gov.co/senado/basedoc/ley_2213_2022.html"></a></div>
+            <div id="res-1995"><h3>Resolución 1995 de 1999</h3><p><strong>Resumen:</strong> Norma clave que regula el manejo de la Historia Clínica. Establece que es un documento confidencial, y obliga a su conservación por un periodo mínimo de <strong>15 años</strong> después de tu última atención, garantizando su seguridad y disponibilidad.</p><a href="https://www.minsalud.gov.co/normatividad_nuevo/resoluci%C3%B3n%201995%20de%201999.pdf"></a></div>
+        </div>
+    </div>
+
+
+    <script>
+        const SERVER_ENDPOINT = './signature_handler.php'; 
+        
+        // --- Elementos del DOM ---
+        const typeAdult = document.getElementById('type-adult');
+        const typeMinor = document.getElementById('type-minor');
+        const sectionLegalRep = document.getElementById('section-legal-rep');
+        const patientContactFields = document.getElementById('patient-contact-fields');
+        const generateSignatureButton = document.getElementById('generate-signature-button');
+        const buttonText = document.getElementById('button-text');
+        
+        // Modal elements (local form validation modal)
+        const modalOverlay = document.getElementById('modal-overlay');
+        const modalContainer = modalOverlay.querySelector('.modal-container');
+        const modalText = document.getElementById('modal-text');
+        const modalCloseButton = document.getElementById('modal-close');
+
+        // Modal elements (Normativity modal)
+        const normModal = document.getElementById('norm-modal');
+        const normModalCloseBtn = document.getElementById('norm-modal-close-btn');
+
+        // Patient/Adult Fields
+        const patientFields = {
+            name: document.getElementById('patient-full-name'),
+            document: document.getElementById('patient-document'),
+            phone: document.getElementById('patient-phone'),
+            email: document.getElementById('patient-email'),
+            canvas: document.getElementById('signature-canvas-patient'),
+            overlay: document.getElementById('patient-canvas-overlay'),
+            clearBtn: document.getElementById('clear-button-patient'),
+            pad: null, // Will hold SignaturePad instance
+        };
+
+        // Legal Rep Fields
+        const legalFields = {
+            name: document.getElementById('legal-name'),
+            document: document.getElementById('legal-document'),
+            phone: document.getElementById('legal-phone'),
+            email: document.getElementById('legal-email'),
+            canvas: document.getElementById('signature-canvas-legal'),
+            overlay: document.getElementById('legal-canvas-overlay'),
+            clearBtn: document.getElementById('clear-button-legal'),
+            pad: null, // Will hold SignaturePad instance
+        };
+
+        // --- Inicialización y Helpers ---
+
+        function initSignaturePads() {
+            // Inicializa Signature Pad para el paciente/adulto
+            patientFields.pad = new SignaturePad(patientFields.canvas, {
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                penColor: 'rgb(255, 255, 255)'
+            });
+            // Inicializa Signature Pad para el representante legal
+            legalFields.pad = new SignaturePad(legalFields.canvas, {
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                penColor: 'rgb(255, 255, 255)'
+            });
+        }
+        
+        function resizeCanvas() {
+            const canvases = [patientFields.canvas, legalFields.canvas];
+            canvases.forEach(canvas => {
+                const ratio = Math.max(window.devicePixelRatio || 1, 1);
+                canvas.width = canvas.offsetWidth * ratio;
+                canvas.height = canvas.offsetHeight * ratio;
+                canvas.getContext("2d").scale(ratio, ratio);
+            });
+            // Mantener la firma dibujada si es posible, o limpiarla.
+            if(patientFields.pad) patientFields.pad.clear();
+            if(legalFields.pad) legalFields.pad.clear();
+        }
+
+        // --- Lógica de Modales ---
+
+        function showModal(message, isNormModal = false) {
+            if (isNormModal) {
+                 // Logic handled by setupNormModal()
+                 return; 
+            }
+            // Logic for local form validation modal
+            modalText.textContent = message;
+            modalOverlay.classList.remove('hidden');
+            setTimeout(() => {
+                modalOverlay.classList.remove('opacity-0');
+                modalContainer.classList.remove('opacity-0', '-translate-y-10');
+            }, 10);
+        }
+
+        function closeModal(modalElement) {
+            const overlay = modalElement || modalOverlay;
+            const container = overlay.querySelector('.modal-container');
+            
+            overlay.classList.add('opacity-0');
+            container.classList.add('opacity-0', '-translate-y-10');
+            
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+            }, 300);
+        }
+        
+        function setupNormModal() {
+            const normLinks = document.querySelectorAll('.norm-link');
+            const modalTitle = document.getElementById('norm-modal-title');
+            const modalContent = document.getElementById('norm-modal-content');
+            const modalLink = document.getElementById('norm-modal-link');
+            const contentSourceContainer = document.getElementById('norm-content-container');
+            
+            if (!normModal || normLinks.length === 0) return;
+
+            const openNormModal = (normId) => {
+                const contentSource = contentSourceContainer.querySelector(`#${normId}`);
+                if (!contentSource) return;
+
+                // 1. Llenar contenido
+                modalTitle.innerText = contentSource.querySelector('h3').innerText;
+                modalContent.innerHTML = contentSource.querySelector('p').outerHTML;
+                modalLink.href = contentSource.querySelector('a').href;
+                
+                // 2. Mostrar modal
+                normModal.classList.remove('hidden');
+                setTimeout(() => {
+                    normModal.querySelector('.modal-container').classList.remove('opacity-0', '-translate-y-10');
+                    normModal.classList.remove('opacity-0');
+                }, 10);
+            };
+
+            const closeNormModal = () => closeModal(normModal);
+
+            normLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const normId = link.dataset.norm;
+                    if(normId) openNormModal(normId);
+                });
+            });
+
+            normModalCloseBtn.addEventListener('click', closeNormModal);
+            normModal.addEventListener('click', (e) => e.target === normModal && closeNormModal());
+        }
+
+
+        // --- Lógica de Habilitación / Validación de Campos ---
+
+        function updateCanvasState(fields) {
+            // Campos requeridos para habilitar el canvas
+            const requiredInputs = [fields.name, fields.document];
+            
+            // Si es Adulto o Representante Legal, se incluyen los campos de contacto
+            const isContactRequired = typeAdult.checked || (typeMinor.checked && fields === legalFields);
+            if (isContactRequired) {
+                requiredInputs.push(fields.phone, fields.email);
+            }
+            
+            const allInputsFilled = requiredInputs.every(input => input.value && input.value.trim() !== '');
+
+            if (allInputsFilled) {
+                fields.overlay.classList.add('opacity-0');
+                setTimeout(() => fields.overlay.style.display = 'none', 300);
+            } else {
+                fields.overlay.style.display = 'flex';
+                setTimeout(() => fields.overlay.classList.remove('opacity-0'), 10);
+            }
+        }
+
+        function setupInputListeners() {
+            [patientFields.name, patientFields.document, patientFields.phone, patientFields.email].forEach(input => {
+                if (input) input.addEventListener('input', () => updateCanvasState(patientFields));
+            });
+            [legalFields.name, legalFields.document, legalFields.phone, legalFields.email].forEach(input => {
+                if (input) input.addEventListener('input', () => updateCanvasState(legalFields));
+            });
+        }
+        
+        function toggleSections() {
+            // Revisa qué modo está activo: 'adult' o 'minor'
+            const isAdult = typeAdult.checked;
+            
+            // 1. Alterna la visibilidad de la sección de Representante Legal
+            sectionLegalRep.classList.toggle('hidden-section', isAdult);
+            
+            // 2. Alterna la visibilidad de los campos de contacto del paciente
+            // Si es adulto (isAdult=true), los campos de contacto se muestran. 
+            // Si es menor (isAdult=false), los campos se ocultan (y se llenarán con N/A en PHP).
+            patientContactFields.classList.toggle('hidden-section', !isAdult);
+            
+            // 3. Limpia ambas firmas y actualiza estados
+            if(patientFields.pad) patientFields.pad.clear();
+            if(legalFields.pad) legalFields.pad.clear();
+
+            // Vuelve a adjuntar listeners y actualiza la validación
+            setupInputListeners();
+            updateCanvasState(patientFields);
+            updateCanvasState(legalFields);
+            
+            // 4. Actualizar iconos de selección
+            document.querySelectorAll('.radio-card').forEach(card => {
+                const isChecked = card.querySelector('input').checked;
+                const checkIcon = card.querySelector('.check-icon');
+                if (checkIcon) {
+                    checkIcon.classList.toggle('opacity-100', isChecked);
+                    checkIcon.classList.toggle('opacity-0', !isChecked);
+                }
+                card.style.borderColor = isChecked ? '#EC008C' : 'rgba(255, 255, 255, 0.2)';
+                card.style.background = isChecked ? 'rgba(236, 0, 140, 0.1)' : 'rgba(255, 255, 255, 0.1)';
+            });
+        }
+        
+        // --- Lógica de Envío ---
+
+        function validateAndPreparePayload() {
+            const isAdult = typeAdult.checked;
+            const payload = {
+                type: isAdult ? 'ADULTO' : 'MENOR_DE_EDAD',
+                email_destino: 'kevincriadop@gmail.com', // Correo destino fijo
+                paciente: {},
+                representante: isAdult ? null : {}
+            };
+            let validationError = '';
+
+            // --- VALIDACIÓN DE PACIENTE (ADULTO O MENOR) ---
+            if (!patientFields.name.value.trim() || !patientFields.document.value.trim()) {
+                validationError = 'Faltan campos obligatorios de Nombre y/o Documento del paciente.';
+            } else if (patientFields.pad.isEmpty()) {
+                validationError = 'Falta la firma del paciente (Asentimiento para menores).';
+            } else {
+                payload.paciente.nombre = patientFields.name.value.trim();
+                payload.paciente.documento = patientFields.document.value.trim();
+                payload.paciente.firma = patientFields.pad.toDataURL('image/png');
+            }
+
+            // Campos de contacto del paciente (Solo si es adulto)
+            if (isAdult) {
+                if (!patientFields.phone.value.trim() || !patientFields.email.value.trim()) {
+                    validationError = 'Faltan campos obligatorios de Teléfono y/o Correo del adulto.';
+                } else {
+                    payload.paciente.telefono = patientFields.phone.value.trim();
+                    payload.paciente.email = patientFields.email.value.trim();
+                }
+            } else {
+                // Si es menor, los campos de contacto del paciente se rellenan como N/A si están vacíos.
+                payload.paciente.telefono = patientFields.phone.value.trim() || 'N/A';
+                payload.paciente.email = patientFields.email.value.trim() || 'N/A';
+            }
+
+
+            // --- VALIDACIÓN DE REPRESENTANTE LEGAL (Solo si es menor) ---
+            if (!isAdult) {
+                if (!legalFields.name.value.trim() || !legalFields.document.value.trim() || 
+                    !legalFields.phone.value.trim() || !legalFields.email.value.trim()) {
+                    validationError = 'Faltan campos obligatorios de Nombre, Documento, Teléfono y/o Correo del representante legal.';
+                } else if (legalFields.pad.isEmpty()) {
+                    validationError = 'Falta la firma del representante legal.';
+                } else {
+                    payload.representante.nombre = legalFields.name.value.trim();
+                    payload.representante.documento = legalFields.document.value.trim();
+                    payload.representante.telefono = legalFields.phone.value.trim();
+                    payload.representante.email = legalFields.email.value.trim();
+                    payload.representante.firma = legalFields.pad.toDataURL('image/png');
+                }
+            }
+
+            if (validationError) {
+                showModal(validationError);
+                return null;
+            }
+
+            return payload;
+        }
+
+        async function handleSubmission(payload) {
+            buttonText.textContent = 'Enviando...';
+            generateSignatureButton.disabled = true;
+
+            try {
+                const response = await fetch(SERVER_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success) {
+                        showMessage('¡Firma(s) generada(s) y enviada(s) con éxito! Revisa tu correo.', 'text-green-300');
+                        // Limpiar formulario y firmas
+                        [patientFields.name, patientFields.document, patientFields.phone, patientFields.email].forEach(input => input.value = '');
+                        [legalFields.name, legalFields.document, legalFields.phone, legalFields.email].forEach(input => input.value = '');
+                        if(patientFields.pad) patientFields.pad.clear();
+                        if(legalFields.pad) legalFields.pad.clear();
+                        toggleSections(); // Restablece la UI
+                    } else {
+                        showMessage(`Error al generar firma: ${result.message}`, 'text-red-300');
+                    }
+                } else {
+                    showMessage('Error de conexión con el servidor. Código: ' + response.status, 'text-red-300');
+                }
+            } catch (error) {
+                showMessage(`Fallo de conexión. No se pudo enviar la firma: ${error.message}`, 'text-red-300');
+            } finally {
+                buttonText.textContent = 'Generar Firma y Enviar Documentos';
+                generateSignatureButton.disabled = false;
+            }
+        }
+        
+        function showMessage(message, colorClass) {
+            const statusMessage = document.getElementById('status-message');
+            statusMessage.textContent = message;
+            statusMessage.className = `mt-4 text-center text-sm font-medium ${colorClass}`;
+        }
+
+        // --- Event Listeners and Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            initSignaturePads();
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas(); 
+            toggleSections(); // Inicializa el estado con el Adulto seleccionado
+            setupInputListeners(); // Inicializa los listeners de validación
+            setupNormModal(); // Inicializa la lógica de modales de normatividad
+
+            // Inicializa la barra de progreso al cargar
+            const progressBar = document.getElementById('progress-bar');
+            window.addEventListener('scroll', () => {
+                const scrollableHeight = document.documentElement.scrollHeight - window.innerHeight;
+                const scrolled = (window.scrollY / scrollableHeight) * 100;
+                if(progressBar) progressBar.style.width = `${scrolled}%`;
+            });
+
+            patientFields.clearBtn.addEventListener('click', (e) => { e.preventDefault(); patientFields.pad.clear(); });
+            legalFields.clearBtn.addEventListener('click', (e) => { e.preventDefault(); legalFields.pad.clear(); });
+
+            // Cierre del modal de validación de formulario (local)
+            modalCloseButton.addEventListener('click', () => closeModal(modalOverlay));
+            modalOverlay.addEventListener('click', (e) => {
+                if (e.target === modalOverlay) closeModal(modalOverlay);
+            });
+
+            // Cierre del modal de normatividad
+            normModalCloseBtn.addEventListener('click', () => closeModal(normModal));
+            normModal.addEventListener('click', (e) => {
+                if (e.target === normModal) closeModal(normModal);
+            });
+            
+            generateSignatureButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                const payload = validateAndPreparePayload();
+                if (payload) {
+                    handleSubmission(payload);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
