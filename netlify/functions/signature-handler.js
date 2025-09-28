@@ -39,7 +39,7 @@ exports.handler = async (event, context) => {
             }
         });
 
-        // **PASO DE DIAGNÓSTICO AÑADIDO:** Verificar la conexión SMTP
+        // **PASO DE DIAGNÓSTICO:** Verificar la conexión SMTP (Si falla aquí, el error es de ZOHO_PASS)
         await transporter.verify();
         console.log("Conexión SMTP con Zoho establecida exitosamente.");
 
@@ -53,16 +53,18 @@ exports.handler = async (event, context) => {
             currentDate, currentTime
         } = data;
         
-        // ... (el resto de tu lógica de extracción de datos y construcción del correo)
+        // --- Comienza la construcción del correo ---
         
         // 4. Construcción del cuerpo del correo y los adjuntos
         // Reconstrucción del nombre del documento para el adjunto
-        const documentFileName = `${documentType.replace(/ /g, '_')}_${patientName.replace(/ /g, '_')}_${currentDate.replace(/\//g, '-')}.pdf`;
+        // Se usa `legalRepresentativeName` como respaldo si `patientName` no está disponible
+        const docName = (patientName || legalRepresentativeName).replace(/ /g, '_');
+        const documentFileName = `${documentType.replace(/ /g, '_')}_${docName}_${currentDate.replace(/\//g, '-')}.pdf`;
 
         const mailOptions = {
             from: `Kevin Criado Psicología <${ZOHO_USER}>`,
             to: ZOHO_USER, // El correo de Kevin
-            subject: `[FIRMA DIGITAL] Nuevo Documento: ${documentType} - ${patientName}`,
+            subject: `[FIRMA DIGITAL] Nuevo Documento: ${documentType} - ${patientName || legalRepresentativeName}`,
             html: `
                 <h2>Documento Firmado Digitalmente</h2>
                 <p><strong>Tipo de Documento:</strong> ${documentType}</p>
@@ -70,20 +72,20 @@ exports.handler = async (event, context) => {
                 
                 <h3>Datos del Consultante</h3>
                 <ul>
-                    <li><strong>Nombre:</strong> ${patientName}</li>
-                    <li><strong>Correo:</strong> ${patientEmail}</li>
-                    <li><strong>Documento:</strong> ${patientDocumentType} ${patientDocumentNumber}</li>
-                    <li><strong>Teléfono:</strong> ${patientPhone}</li>
+                    <li><strong>Nombre:</strong> ${patientName || 'N/A'}</li>
+                    <li><strong>Correo:</strong> ${patientEmail || 'N/A'}</li>
+                    <li><strong>Documento:</strong> ${patientDocumentType || 'N/A'} ${patientDocumentNumber || 'N/A'}</li>
+                    <li><strong>Teléfono:</strong> ${patientPhone || 'N/A'}</li>
                 </ul>
                 
                 ${isMinor ? `
                     <h3>Datos del Representante Legal y Menor</h3>
                     <ul>
-                        <li><strong>Representante Legal:</strong> ${legalRepresentativeName}</li>
-                        <li><strong>Documento R.L.:</strong> ${legalRepresentativeDocumentType} ${legalRepresentativeDocumentNumber}</li>
-                        <li><strong>Teléfono R.L.:</strong> ${legalRepresentativePhone}</li>
-                        <li><strong>Menor de Edad:</strong> ${minorName}</li>
-                        <li><strong>Documento Menor:</strong> ${minorDocumentType} ${minorDocumentNumber}</li>
+                        <li><strong>Representante Legal:</strong> ${legalRepresentativeName || 'N/A'}</li>
+                        <li><strong>Documento R.L.:</strong> ${legalRepresentativeDocumentType || 'N/A'} ${legalRepresentativeDocumentNumber || 'N/A'}</li>
+                        <li><strong>Teléfono R.L.:</strong> ${legalRepresentativePhone || 'N/A'}</li>
+                        <li><strong>Menor de Edad:</strong> ${minorName || 'N/A'}</li>
+                        <li><strong>Documento Menor:</strong> ${minorDocumentType || 'N/A'} ${minorDocumentNumber || 'N/A'}</li>
                     </ul>
                 ` : ''}
 
@@ -94,16 +96,18 @@ exports.handler = async (event, context) => {
                 <p><strong>Nota:</strong> El PDF adjunto contiene el documento firmado con validez legal.</p>
             `,
             attachments: [
+                // Adjunto principal: El documento PDF serializado
                 {
                     filename: documentFileName,
-                    content: pdfBase64.split(';base64,').pop(), // Limpia el prefijo del Base64
+                    content: pdfBase64.split(';base64,').pop(), 
                     encoding: 'base64',
                     contentType: 'application/pdf',
                 },
-                // Firmas adjuntas como imágenes (Opcional, si deseas verlas en el cuerpo del correo)
+                // Firmas adjuntas como imágenes (para el cuerpo del correo o referencia)
+                // Usamos CID para incrustar la imagen en el correo si el front-end lo hiciera, pero aquí solo la adjuntamos para referencia.
                 {
                     filename: 'firma_paciente.png',
-                    content: patientSignature.split(';base64,').pop(),
+                    content: (patientSignature || '').split(';base64,').pop(),
                     encoding: 'base64',
                     cid: 'patientSignature',
                 },
@@ -113,6 +117,7 @@ exports.handler = async (event, context) => {
                     encoding: 'base64',
                     cid: 'legalRepresentativeSignature',
                 }] : []),
+                // Si el paciente es menor, la "patientSignature" es el asentimiento del menor
                 ...(isMinor && minorAssentSignature ? [{
                     filename: 'firma_asentimiento_menor.png',
                     content: minorAssentSignature.split(';base64,').pop(),
@@ -126,18 +131,18 @@ exports.handler = async (event, context) => {
         let info = await transporter.sendMail(mailOptions);
         console.log("Mensaje enviado a Kevin: %s", info.messageId);
 
-        // 6. Envío de confirmación al Cliente (Opcional, pero recomendado)
-        const patientEmail = data.patientEmail || data.legalRepresentativeEmail; // Usar el email del paciente o acudiente
-        const patientNameForEmail = data.patientName || data.legalRepresentativeName;
+        // 6. Envío de confirmación al Cliente (Copia al paciente/representante)
+        const recipientEmail = patientEmail || legalRepresentativePhone; // Usar el email del paciente o acudiente
+        const recipientName = patientName || legalRepresentativeName;
         
-        if (patientEmail) {
+        if (recipientEmail) {
             const confirmationMail = {
                 from: `Kevin Criado Psicología <${ZOHO_USER}>`,
-                to: patientEmail, // Dirección del paciente/acudiente
+                to: recipientEmail, // Dirección del paciente/acudiente
                 subject: "Confirmación de Documentos Firmados Digitalmente",
                 html: `
                     <h2>¡Proceso de Firma Digital Completado Exitosamente!</h2>
-                    <p>Estimado(a) ${patientNameForEmail},</p>
+                    <p>Estimado(a) ${recipientName || 'Consultante'},</p>
                     <p>Confirmamos que tus documentos de consentimiento y autorización han sido firmados digitalmente con éxito y se han guardado de forma segura.</p>
                     <p>Pronto recibirás una copia final de todos los documentos.</p>
                     <br>
@@ -146,26 +151,27 @@ exports.handler = async (event, context) => {
                 `
             };
             await transporter.sendMail(confirmationMail);
-            console.log("Confirmación enviada a: %s", patientEmail);
+            console.log("Confirmación enviada a: %s", recipientEmail);
         }
 
 
         // 7. Respuesta de éxito a la aplicación web
         return {
             statusCode: 200,
-            body: JSON.stringify({ message: "Documentos firmados y enviados por correo exitosamente.", messageId: info.messageId }),
+            body: JSON.stringify({ success: true, message: "Documentos firmados y enviados por correo exitosamente.", messageId: info.messageId }),
         };
 
     } catch (error) {
         console.error("Error al procesar la solicitud:", error);
-        // Si el error es de autenticación, lo hacemos más explícito en la respuesta.
+        
+        // Si el error es de autenticación, lo hacemos más explícito en la respuesta (si Netlify lo permite)
         let errorMessage = "Error interno del servidor al enviar el correo.";
         if (error.message && error.message.includes('auth')) {
-             errorMessage = "Fallo de autenticación de correo. Revise ZOHO_USER y ZOHO_PASS (Contraseña de Aplicación).";
+             errorMessage = "Fallo de autenticación de correo. Revise ZOHO_USER y ZOHO_PASS (Contraseña de Aplicación) en Netlify.";
         }
         return {
             statusCode: 500,
-            body: JSON.stringify({ message: errorMessage, error: error.message }),
+            body: JSON.stringify({ success: false, message: errorMessage, error: error.message }),
         };
     }
 };
