@@ -1,10 +1,10 @@
 // Importa todas las dependencias necesarias
 const fs = require('fs');
 const path = require('path');
-const os = require('os'); // Necesario para el directorio temporal
+const os = require('os');
 const PizZip = require('pizzip');
 const Docxtemplater = require('docxtemplater');
-const docxPdf = require('docx-pdf'); // Nueva librería de conversión
+const docxPdf = require('docx-pdf');
 const { PDFDocument } = require('pdf-lib');
 const nodemailer = require('nodemailer');
 const { google } = require('googleapis');
@@ -36,8 +36,10 @@ exports.handler = async (event) => {
 
     try {
         const data = JSON.parse(event.body);
-        
+        console.log("Paso 0: Datos recibidos del formulario.");
+
         // --- 1. LÓGICA DE REGISTRO CON GOOGLE SHEETS ---
+        console.log("Paso 1: Conectando con Google Sheets...");
         const sheets = await getGoogleSheetsClient();
         const sheetId = process.env.GOOGLE_SHEET_ID;
         const range = 'A:K';
@@ -49,17 +51,22 @@ exports.handler = async (event) => {
         rows.forEach(row => {
             const rowDate = row[0];
             const rowDoc = row[2];
-            if (rowDate === data.fecha_sesion && rowDoc === data.documento) {
+            // La fecha en Sheets puede tener formato diferente, comparamos sin formato estricto por ahora
+            if (row[0] === data.FECHA_SESION && row[2] === data.DOCUMENTO) {
                 sessionCountToday++;
             }
         });
+        console.log(`Paso 1 completado. Esta es la sesión N°${sessionCountToday} para este paciente hoy.`);
 
         // --- 2. GENERACIÓN DE CONTRASEÑA ---
-        const initials = data.nombre_completo.split(' ').map(n => n[0]).join('');
-        const dateForPassword = data.fecha_sesion.replace(/-/g, '');
-        const password = `${initials}${data.documento}${dateForPassword}`;
+        console.log("Paso 2: Generando contraseña...");
+        const initials = data.NOMBRE_COMPLETO.split(' ').map(n => n[0]).join('');
+        const dateForPassword = data.FECHA_SESION.replace(/\//g, ''); // Reemplaza '/' por nada
+        const password = `${initials}${data.DOCUMENTO}${dateForPassword}`;
+        console.log("Paso 2 completado.");
 
         // --- 3. LLENADO DE PLANTILLA DOCX ---
+        console.log("Paso 3: Llenando plantilla DOCX...");
         const templatePath = path.resolve(__dirname, 'PlantillaHC.docx');
         const templateContent = fs.readFileSync(templatePath);
         const zip = new PizZip(templateContent);
@@ -70,52 +77,56 @@ exports.handler = async (event) => {
         templateData.GRABACION_NO = data.autoriza_grabacion === 'NO' ? 'X' : ' ';
         templateData.TRANSCRIPCION_SI = data.autoriza_transcripcion === 'SI' ? 'X' : ' ';
         templateData.TRANSCRIPCION_NO = data.autoriza_transcripcion === 'NO' ? 'X' : ' ';
-
+        
         doc.setData(templateData);
-        doc.render();
 
+        try {
+            doc.render();
+        } catch (renderError) {
+            console.error("Error de Docxtemplater:", JSON.stringify(renderError));
+            throw new Error(`Error al reemplazar marcadores en la plantilla: ${renderError.message}. Revisa si falta algún marcador.`);
+        }
+        
         const filledDocxBuffer = doc.getZip().generate({ type: 'nodebuffer' });
+        console.log("Paso 3 completado.");
 
-        // --- 4. CONVERSIÓN DE DOCX A PDF (NUEVO MÉTODO) ---
-        // Las funciones serverless de Netlify permiten escribir en un directorio temporal '/tmp'
+
+        // --- 4. CONVERSIÓN DE DOCX A PDF ---
+        console.log("Paso 4: Convirtiendo a PDF...");
         const tempDocxPath = path.join(os.tmpdir(), `temp_${Date.now()}.docx`);
         const tempPdfPath = path.join(os.tmpdir(), `temp_${Date.now()}.pdf`);
 
-        // Escribir el buffer del docx a un archivo temporal
         fs.writeFileSync(tempDocxPath, filledDocxBuffer);
         
-        // Usar la nueva librería para convertir el archivo
         await new Promise((resolve, reject) => {
             docxPdf(tempDocxPath, tempPdfPath, (err) => {
                 if (err) {
-                    return reject(err);
+                    console.error("Error en la conversión de DOCX a PDF:", err);
+                    return reject(new Error("Falló la librería de conversión a PDF."));
                 }
                 resolve();
             });
         });
 
-        // Leer el PDF recién creado en un buffer
         const pdfBuffer = fs.readFileSync(tempPdfPath);
-        
-        // Limpiar los archivos temporales
         fs.unlinkSync(tempDocxPath);
         fs.unlinkSync(tempPdfPath);
+        console.log("Paso 4 completado.");
 
 
         // --- 5. PROTECCIÓN DEL PDF CON CONTRASEÑA ---
+        console.log("Paso 5: Protegiendo PDF...");
         const pdfDoc = await PDFDocument.load(pdfBuffer);
-        pdfDoc.setProducer('Kevin Criado Psicología');
-        pdfDoc.setCreator('Asistente de HC');
-        
         await pdfDoc.encrypt({
             userPassword: password,
             ownerPassword: password, 
             permissions: { printing: 'highResolution', modifying: false, copying: false },
         });
-
         const protectedPdfBytes = await pdfDoc.save();
+        console.log("Paso 5 completado.");
 
         // --- 6. ENVÍO DE CORREOS ---
+        console.log("Paso 6: Configurando y enviando correos...");
         const transporter = nodemailer.createTransport({
             host: process.env.ZOHO_SMTP_HOST,
             port: process.env.ZOHO_SMTP_PORT,
@@ -123,29 +134,34 @@ exports.handler = async (event) => {
             auth: { user: process.env.ZOHO_USER_EMAIL, pass: process.env.ZOHO_USER_PASSWORD },
         });
 
-        const fileName = `HC_${data.documento}_Sesion${sessionCountToday}.pdf`;
+        const fileName = `HC_${data.DOCUMENTO}_Sesion${sessionCountToday}.pdf`;
         
+        // Correo para el profesional
         await transporter.sendMail({
-            from: process.env.ZOHO_USER_EMAIL,
+            from: `"Asistente HC" <${process.env.ZOHO_USER_EMAIL}>`,
             to: process.env.PROFESSIONAL_EMAIL,
-            subject: `Historia Clínica - ${data.nombre_completo}`,
-            html: `<p>Se adjunta la historia clínica del paciente <b>${data.nombre_completo}</b>.</p><p>La contraseña del archivo es: <b>${password}</b></p>`,
+            subject: `Historia Clínica - ${data.NOMBRE_COMPLETO}`,
+            html: `<p>Se adjunta la historia clínica del paciente <b>${data.NOMBRE_COMPLETO}</b>.</p><p>La contraseña del archivo es: <b>${password}</b></p>`,
             attachments: [{ filename: fileName, content: Buffer.from(protectedPdfBytes), contentType: 'application/pdf' }],
         });
 
+        // Correo para el paciente
         await transporter.sendMail({
-            from: process.env.ZOHO_USER_EMAIL,
-            to: data.correo,
+            from: `"Psic. Kevin Criado" <${process.env.ZOHO_USER_EMAIL}>`,
+            to: data.CORREO,
             subject: 'Copia de su Historia Clínica',
             html: `<p>Estimado/a paciente, se adjunta una copia protegida de su historia clínica.</p><p>La contraseña para abrir el archivo es: <b>${password}</b></p><p>Por favor, guárdela en un lugar seguro.</p>`,
             attachments: [{ filename: fileName, content: Buffer.from(protectedPdfBytes), contentType: 'application/pdf' }],
         });
+        console.log("Paso 6 completado.");
+
 
         // --- 7. ACTUALIZAR EL REGISTRO EN GOOGLE SHEETS ---
+        console.log("Paso 7: Actualizando registro en Google Sheets...");
         const newRow = [
-            data.fecha_sesion, data.hora_cons, data.documento, data.nombre_completo,
-            data.motivo, password, fileName, "Enviado por correo",
-            `Sesión ${sessionCountToday}`, data.profesional_sesion, "Completado"
+            data.FECHA_SESION, data.HORA_CONS, data.DOCUMENTO, data.NOMBRE_COMPLETO,
+            data.MOTIVO, password, fileName, "Enviado por correo",
+            `Sesión ${sessionCountToday}`, data.PROFESIONAL_SESION, "Completado"
         ];
         await sheets.spreadsheets.values.append({
             spreadsheetId: sheetId,
@@ -153,12 +169,12 @@ exports.handler = async (event) => {
             valueInputOption: 'USER_ENTERED',
             resource: { values: [newRow] },
         });
+        console.log("Paso 7 completado. ¡Proceso finalizado con éxito!");
         
         return { statusCode: 200, body: JSON.stringify({ message: 'PDF generado, protegido y enviado exitosamente.' }) };
 
     } catch (error) {
-        console.error('Error en la función:', error);
+        console.error('Error detallado en la función:', error);
         return { statusCode: 500, body: JSON.stringify({ message: 'Error interno del servidor.', error: error.message }) };
     }
 };
-
