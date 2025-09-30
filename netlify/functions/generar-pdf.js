@@ -51,7 +51,6 @@ exports.handler = async (event) => {
         rows.forEach(row => {
             const rowDate = row[0];
             const rowDoc = row[2];
-            // La fecha en Sheets puede tener formato diferente, comparamos sin formato estricto por ahora
             if (row[0] === data.FECHA_SESION && row[2] === data.DOCUMENTO) {
                 sessionCountToday++;
             }
@@ -61,7 +60,7 @@ exports.handler = async (event) => {
         // --- 2. GENERACIÓN DE CONTRASEÑA ---
         console.log("Paso 2: Generando contraseña...");
         const initials = data.NOMBRE_COMPLETO.split(' ').map(n => n[0]).join('');
-        const dateForPassword = data.FECHA_SESION.replace(/\//g, ''); // Reemplaza '/' por nada
+        const dateForPassword = data.FECHA_SESION.replace(/\//g, '');
         const password = `${initials}${data.DOCUMENTO}${dateForPassword}`;
         console.log("Paso 2 completado.");
 
@@ -127,19 +126,21 @@ exports.handler = async (event) => {
 
         // --- 6. ENVÍO DE CORREOS ---
         console.log("Paso 6: Configurando y enviando correos...");
+        // **MODIFICACIÓN**: Usando ZOHO_USER y ZOHO_PASS
         const transporter = nodemailer.createTransport({
             host: process.env.ZOHO_SMTP_HOST,
             port: process.env.ZOHO_SMTP_PORT,
             secure: true,
-            auth: { user: process.env.ZOHO_USER_EMAIL, pass: process.env.ZOHO_USER_PASSWORD },
+            auth: { user: process.env.ZOHO_USER, pass: process.env.ZOHO_PASS },
         });
 
         const fileName = `HC_${data.DOCUMENTO}_Sesion${sessionCountToday}.pdf`;
         
         // Correo para el profesional
+        // **MODIFICACIÓN**: Enviando a ZOHO_USER
         await transporter.sendMail({
-            from: `"Asistente HC" <${process.env.ZOHO_USER_EMAIL}>`,
-            to: process.env.PROFESSIONAL_EMAIL,
+            from: `"Asistente HC" <${process.env.ZOHO_USER}>`,
+            to: process.env.ZOHO_USER,
             subject: `Historia Clínica - ${data.NOMBRE_COMPLETO}`,
             html: `<p>Se adjunta la historia clínica del paciente <b>${data.NOMBRE_COMPLETO}</b>.</p><p>La contraseña del archivo es: <b>${password}</b></p>`,
             attachments: [{ filename: fileName, content: Buffer.from(protectedPdfBytes), contentType: 'application/pdf' }],
@@ -147,7 +148,7 @@ exports.handler = async (event) => {
 
         // Correo para el paciente
         await transporter.sendMail({
-            from: `"Psic. Kevin Criado" <${process.env.ZOHO_USER_EMAIL}>`,
+            from: `"Psic. Kevin Criado" <${process.env.ZOHO_USER}>`,
             to: data.CORREO,
             subject: 'Copia de su Historia Clínica',
             html: `<p>Estimado/a paciente, se adjunta una copia protegida de su historia clínica.</p><p>La contraseña para abrir el archivo es: <b>${password}</b></p><p>Por favor, guárdela en un lugar seguro.</p>`,
