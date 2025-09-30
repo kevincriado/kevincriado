@@ -1,18 +1,17 @@
 // Importa todas las dependencias necesarias
 const fs = require('fs');
 const path = require('path');
+const os = require('os'); // Necesario para el directorio temporal
 const PizZip = require('pizzip');
 const Docxtemplater = require('docxtemplater');
-const docxToPdf = require('@nativedocuments/docx-to-pdf');
+const docxPdf = require('docx-pdf'); // Nueva librería de conversión
 const { PDFDocument } = require('pdf-lib');
 const nodemailer = require('nodemailer');
 const { google } = require('googleapis');
 const { JWT } = require('google-auth-library');
 
 // --- HELPER: AUTENTICACIÓN CON GOOGLE SHEETS ---
-// Esta función se encarga de la conexión segura con la API de Google Sheets
 async function getGoogleSheetsClient() {
-    // Lee las credenciales desde las variables de entorno de Netlify
     const credentialsBase64 = process.env.GOOGLE_SERVICE_ACCOUNT_CREDENTIALS;
     if (!credentialsBase64) {
         throw new Error("La variable de entorno GOOGLE_SERVICE_ACCOUNT_CREDENTIALS no está definida.");
@@ -41,17 +40,15 @@ exports.handler = async (event) => {
         // --- 1. LÓGICA DE REGISTRO CON GOOGLE SHEETS ---
         const sheets = await getGoogleSheetsClient();
         const sheetId = process.env.GOOGLE_SHEET_ID;
-        const range = 'A:K'; // Rango que cubre todas tus columnas
+        const range = 'A:K';
 
-        // Obtener todos los registros existentes
         const response = await sheets.spreadsheets.values.get({ spreadsheetId: sheetId, range });
         const rows = response.data.values || [];
 
-        // Calcular número de sesión para el paciente en la fecha actual
         let sessionCountToday = 1;
         rows.forEach(row => {
-            const rowDate = row[0]; // Columna 'Fecha'
-            const rowDoc = row[2]; // Columna 'Cédula'
+            const rowDate = row[0];
+            const rowDoc = row[2];
             if (rowDate === data.fecha_sesion && rowDoc === data.documento) {
                 sessionCountToday++;
             }
@@ -59,7 +56,7 @@ exports.handler = async (event) => {
 
         // --- 2. GENERACIÓN DE CONTRASEÑA ---
         const initials = data.nombre_completo.split(' ').map(n => n[0]).join('');
-        const dateForPassword = data.fecha_sesion.replace(/-/g, ''); // Formato YYYYMMDD
+        const dateForPassword = data.fecha_sesion.replace(/-/g, '');
         const password = `${initials}${data.documento}${dateForPassword}`;
 
         // --- 3. LLENADO DE PLANTILLA DOCX ---
@@ -68,7 +65,6 @@ exports.handler = async (event) => {
         const zip = new PizZip(templateContent);
         const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
 
-        // Prepara los datos para la plantilla, incluyendo los marcadores de consentimiento
         const templateData = { ...data };
         templateData.GRABACION_SI = data.autoriza_grabacion === 'SI' ? 'X' : ' ';
         templateData.GRABACION_NO = data.autoriza_grabacion === 'NO' ? 'X' : ' ';
@@ -80,15 +76,37 @@ exports.handler = async (event) => {
 
         const filledDocxBuffer = doc.getZip().generate({ type: 'nodebuffer' });
 
-        // --- 4. CONVERSIÓN DE DOCX A PDF ---
-        const pdfBuffer = await docxToPdf(filledDocxBuffer);
+        // --- 4. CONVERSIÓN DE DOCX A PDF (NUEVO MÉTODO) ---
+        // Las funciones serverless de Netlify permiten escribir en un directorio temporal '/tmp'
+        const tempDocxPath = path.join(os.tmpdir(), `temp_${Date.now()}.docx`);
+        const tempPdfPath = path.join(os.tmpdir(), `temp_${Date.now()}.pdf`);
+
+        // Escribir el buffer del docx a un archivo temporal
+        fs.writeFileSync(tempDocxPath, filledDocxBuffer);
+        
+        // Usar la nueva librería para convertir el archivo
+        await new Promise((resolve, reject) => {
+            docxPdf(tempDocxPath, tempPdfPath, (err) => {
+                if (err) {
+                    return reject(err);
+                }
+                resolve();
+            });
+        });
+
+        // Leer el PDF recién creado en un buffer
+        const pdfBuffer = fs.readFileSync(tempPdfPath);
+        
+        // Limpiar los archivos temporales
+        fs.unlinkSync(tempDocxPath);
+        fs.unlinkSync(tempPdfPath);
+
 
         // --- 5. PROTECCIÓN DEL PDF CON CONTRASEÑA ---
         const pdfDoc = await PDFDocument.load(pdfBuffer);
         pdfDoc.setProducer('Kevin Criado Psicología');
         pdfDoc.setCreator('Asistente de HC');
         
-        // Opciones de encriptación con la contraseña generada
         await pdfDoc.encrypt({
             userPassword: password,
             ownerPassword: password, 
@@ -107,7 +125,6 @@ exports.handler = async (event) => {
 
         const fileName = `HC_${data.documento}_Sesion${sessionCountToday}.pdf`;
         
-        // Correo para el profesional
         await transporter.sendMail({
             from: process.env.ZOHO_USER_EMAIL,
             to: process.env.PROFESSIONAL_EMAIL,
@@ -116,7 +133,6 @@ exports.handler = async (event) => {
             attachments: [{ filename: fileName, content: Buffer.from(protectedPdfBytes), contentType: 'application/pdf' }],
         });
 
-        // Correo para el paciente
         await transporter.sendMail({
             from: process.env.ZOHO_USER_EMAIL,
             to: data.correo,
