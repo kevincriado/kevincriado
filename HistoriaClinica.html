@@ -415,27 +415,100 @@
                 checkFormValidity();
             }
             
+            // **Función CRÍTICA corregida**
             function gatherFormData() {
                 const rawData = {};
                 const inputs = form.querySelectorAll("input, select, textarea");
                 inputs.forEach(input => {
-                    // Usamos el ID para recolectar, ya que es único
                     if(input.id) {
                         rawData[input.id] = input.value;
                     }
                 });
-                
-                // Mapeamos los IDs a los marcadores de la plantilla en MAYÚSCULAS
-                const formattedData = {};
-                for (const key in rawData) {
-                    formattedData[key.toUpperCase()] = rawData[key];
-                }
-                
-                // Aseguramos que los campos de fecha y profesional tengan el formato correcto
-                formattedData.FECHA_CONS = new Date(rawData.fecha_cons).toLocaleDateString('es-CO');
-                formattedData.PROFESIONAL_SESION = rawData.profesional_sesion;
 
-                return formattedData;
+                // Mapeo explícito para coincidir PERFECTAMENTE con los marcadores de la plantilla DOCX
+                const mappedData = {
+                    'NOMBRE_COMPLETO': rawData.nombre_completo,
+                    'TIPO_ DTO': rawData.tipo_dto, // <-- CORRECCIÓN: Se asegura de que el espacio esté presente
+                    'DOCUMENTO': rawData.documento,
+                    'F_NACIMIENTO': new Date(rawData.f_nacimiento).toLocaleDateString('es-CO'),
+                    'EDAD': rawData.edad,
+                    'SEXO': rawData.sexo,
+                    'ESTADO_CIVIL': rawData.estado_civil,
+                    'EPS': rawData.eps,
+                    'REGIMEN': rawData.regimen,
+                    'ORIENTACION_SEX': rawData.orientacion_sex,
+                    'DIRECCION': rawData.direccion,
+                    'UBICACION': rawData.ubicacion,
+                    'EDUCACION': rawData.educacion,
+                    'OCUPACION': rawData.ocupacion,
+                    'TELEFONO': rawData.telefono,
+                    'CORREO': rawData.correo,
+                    'CONTACTO_E': rawData.contacto_e,
+                    'TEL_EMERGENCIA': rawData.tel_emergencia,
+                    'MOTIVO': rawData.motivo,
+                    'DESCRIPCION': rawData.descripcion,
+                    'PSICOSOCIAL': rawData.psicosocial,
+                    'SUEÑO': rawData.sueño,
+                    'ALIMENTACION': rawData.alimentacion,
+                    'SEX_ACTIVO': rawData.sex_activo,
+                    'EDAD_SEX': rawData.edad_sex,
+                    'N_PAREJAS': rawData.n_parejas,
+                    'IMG_CORPORAL': rawData.img_corporal,
+                    'TABACO': rawData.tabaco,
+                    'ALCOHOL': rawData.alcohol,
+                    'PSICOACTIVA': rawData.psicoactiva,
+                    'SUICIDIO': rawData.suicidio,
+                    'RIESGOS_SOCIALES': rawData.riesgos_sociales,
+                    'PLAN_SEGURIDAD': rawData.plan_seguridad,
+                    'ANT_PERSONALES': rawData.ant_personales,
+                    'ANT_FAMILIARES': rawData.ant_familiares,
+                    'PATOLOGICOS': rawData.patologicos,
+                    'HOSPITALARIOS': rawData.hospitalarios,
+                    'FARMACOLOGICOS': rawData.farmacologicos,
+                    'QUIRURGICOS': rawData.quirurgicos,
+                    'TRAUMATICOS': rawData.traumaticos,
+                    'ALERGICOS': rawData.alergicos,
+                    'VENEREOS': rawData.venereos,
+                    'ANT_PSICOLOGICOS': rawData.ant_psicologicos,
+                    'ANT_PSIQUIATRICOS': rawData.ant_psiquiatricos,
+                    'HISTORIA_PROBLEMA': rawData.historia_problema,
+                    'ESTADO_MENTAL': rawData.estado_mental,
+                    'ESTADO_EMOCIONAL': rawData.estado_emocional,
+                    'ESTADO_COGNITIVO': rawData.estado_cognitivo,
+                    'APARIENCIA': rawData.apariencia,
+                    'LENGUAJE': rawData.lenguaje,
+                    'PERCEPCION': rawData.percepcion,
+                    'INT_SOCIAL': rawData.int_social,
+                    'INT_LABORAL': rawData.int_laboral,
+                    'INT_FAMILIAR': rawData.int_familiar,
+                    'INT_SENTIMENTAL': rawData.int_sentimental,
+                    'ACT_COTIDIANAS': rawData.act_cotidianas,
+                    'AUTOCUIDADO': rawData.autocuidado,
+                    'PROYECTO_VIDA': rawData.proyecto_vida,
+                    'REDES_APOYO': rawData.redes_apoyo,
+                    'ANALISIS_CASO': rawData.analisis_caso,
+                    'DIAGNOSTICO_PRINC': rawData.diagnostico_princ,
+                    'DIAGNOSTICO_SEC': rawData.diagnostico_sec,
+                    'OBJETIVO_TRATAMIENTO': rawData.objetivo_tratamiento,
+                    'ENFOQUE_ESTRATEGIAS': rawData.enfoque_estrategias,
+                    'FRECUENCIA_DURACION': rawData.frecuencia_duracion,
+                    'PLAN_SEGUIMIENTO': rawData.plan_seguimiento,
+                    'COMPROMISOS': rawData.compromisos,
+                    'FECHA_SESION': new Date(rawData.fecha_sesion).toLocaleDateString('es-CO'),
+                    'NUM_SESION': rawData.num_sesion,
+                    'NOTA_EVOLUCION': rawData.nota_evolucion,
+                    'REFERENCIAS': rawData.referencias,
+                    
+                    // Datos que no vienen de un campo de texto directo pero se necesitan
+                    'FECHA_CONS': new Date(rawData.fecha_cons).toLocaleDateString('es-CO'),
+                    'HORA_CONS': rawData.hora_cons,
+                    'PROFESIONAL_SESION': rawData.profesional_sesion,
+                    // Estos se usan en el backend para generar los marcadores SI/NO
+                    'autoriza_grabacion': rawData.autoriza_grabacion,
+                    'autoriza_transcripcion': rawData.autoriza_transcripcion
+                };
+
+                return mappedData;
             }
 
             function showStatusModal(title, message, showCloseButton = false) {
@@ -446,11 +519,10 @@
             }
 
             async function generateAndSendPdf() {
-                // Validamos todos los pasos antes de enviar
                 for (let i = 0; i < steps.length; i++) {
                     if (!validateStep(i)) {
                         showStatusModal("Formulario Incompleto", `Hay campos requeridos sin llenar en la sección "${progressSteps[i].textContent}". Por favor, revísalos.`, true);
-                        jumpToStep(i); // Llevamos al usuario al paso con el error
+                        jumpToStep(i);
                         return;
                     }
                 }
@@ -473,7 +545,9 @@
                     if (response.ok) {
                         showStatusModal("¡Éxito!", "La Historia Clínica ha sido generada y enviada correctamente.", true);
                     } else {
-                        throw new Error(result.message || 'Ocurrió un error en el servidor.');
+                        // Muestra el error específico del backend si está disponible
+                        const errorMessage = result.error ? `${result.message} Detalles: ${result.error}` : result.message;
+                        throw new Error(errorMessage || 'Ocurrió un error en el servidor.');
                     }
                 } catch (error) {
                     console.error('Error:', error);
@@ -489,7 +563,13 @@
             form.addEventListener('input', checkFormValidity);
             pdfBtn.addEventListener("click", generateAndSendPdf);
 
-            statusCloseBtn.addEventListener("click", () => statusModal.classList.remove("visible"));
+            statusCloseBtn.addEventListener("click", () => {
+                statusModal.classList.remove("visible");
+                 // Opcional: reiniciar el formulario después de un envío exitoso.
+                if (statusTitle.textContent === "¡Éxito!") {
+                    resetConfirmBtn.click();
+                }
+            });
 
             clearSectionBtn.addEventListener("click", () => {
                 const currentStepDiv = steps[currentStep];
@@ -528,4 +608,3 @@
     </script>
 </body>
 </html>
-
