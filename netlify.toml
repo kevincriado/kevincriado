@@ -6,11 +6,11 @@
 [functions]
   included_files = ["functions/PlantillaHC.docx"]
 
-# --- ¡NUEVA SECCIÓN IMPORTANTE! ---
-# Esta regla previene que las llamadas a la función sean tratadas como
-# páginas normales, solucionando el error "not valid JSON".
+# --- ¡NUEVA REGLA DE REDIRECCIÓN MÁS ROBUSTA! ---
+# Esto crea un "proxy". Cualquier llamada a /api/nombre-funcion
+# será redirigida internamente a la función correspondiente.
+# Esto soluciona el error "not valid JSON" de forma definitiva.
 [[redirects]]
-  from = "/.netlify/functions/*"
+  from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
-  force = true
