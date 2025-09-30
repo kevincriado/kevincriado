@@ -4,8 +4,8 @@
   "description": "Dependencias para las Netlify Functions de firma y generación de HC.",
   "main": "index.js",
   "dependencies": {
-    "@nativedocuments/docx-to-pdf": "^3.0.1",
     "docxtemplater": "^3.47.2",
+    "docx-pdf": "^0.0.1",
     "google-auth-library": "^9.11.0",
     "googleapis": "^140.0.1",
     "nodemailer": "^6.9.14",
