@@ -2,9 +2,15 @@
 [build]
   functions = "functions/"
 
-# Esta es la nueva sección que soluciona el problema.
-# Le dice a Netlify que incluya TODOS los archivos .docx que encuentre
-# dentro de la carpeta 'functions' cuando despliegue la función.
+# Esta sección incluye la plantilla DOCX en el paquete de la función.
 [functions]
-  included_files = ["functions/*.docx"]
+  included_files = ["functions/PlantillaHC.docx"]
 
+# --- ¡NUEVA SECCIÓN IMPORTANTE! ---
+# Esta regla previene que las llamadas a la función sean tratadas como
+# páginas normales, solucionando el error "not valid JSON".
+[[redirects]]
+  from = "/.netlify/functions/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+  force = true
