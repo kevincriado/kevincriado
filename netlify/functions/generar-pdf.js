@@ -17,6 +17,12 @@ async function getGoogleSheetsClient() {
         throw new Error("La variable de entorno GOOGLE_SERVICE_ACCOUNT_CREDENTIALS no está definida.");
     }
     const credentials = JSON.parse(Buffer.from(credentialsBase64, 'base64').toString('ascii'));
+
+    // **NUEVA VALIDACIÓN MEJORADA**: Verifica que las credenciales no estén corruptas.
+    if (!credentials.private_key || !credentials.client_email) {
+        console.error("Error Crítico: El JSON de credenciales de Google está malformado o incompleto. No se encontraron 'private_key' o 'client_email'.");
+        throw new Error("Las credenciales de Google están mal configuradas. Por favor, re-genera la variable de entorno GOOGLE_SERVICE_ACCOUNT_CREDENTIALS en Netlify.");
+    }
     
     const client = new JWT({
         email: credentials.client_email,
@@ -43,7 +49,6 @@ exports.handler = async (event) => {
         const sheets = await getGoogleSheetsClient();
         const sheetId = process.env.GOOGLE_SHEET_ID;
         
-        // **NUEVA VALIDACIÓN**: Verifica que la variable de entorno exista.
         if (!sheetId) {
             console.error("Error Crítico: La variable de entorno GOOGLE_SHEET_ID no está configurada en Netlify.");
             throw new Error("La configuración del servidor está incompleta. Falta el ID de la hoja de cálculo (GOOGLE_SHEET_ID).");
@@ -184,3 +189,4 @@ exports.handler = async (event) => {
         return { statusCode: 500, body: JSON.stringify({ message: 'Error interno del servidor.', error: error.message }) };
     }
 };
+
