@@ -42,6 +42,13 @@ exports.handler = async (event) => {
         console.log("Paso 1: Conectando con Google Sheets...");
         const sheets = await getGoogleSheetsClient();
         const sheetId = process.env.GOOGLE_SHEET_ID;
+        
+        // **NUEVA VALIDACIÓN**: Verifica que la variable de entorno exista.
+        if (!sheetId) {
+            console.error("Error Crítico: La variable de entorno GOOGLE_SHEET_ID no está configurada en Netlify.");
+            throw new Error("La configuración del servidor está incompleta. Falta el ID de la hoja de cálculo (GOOGLE_SHEET_ID).");
+        }
+
         const range = 'A:K';
 
         const response = await sheets.spreadsheets.values.get({ spreadsheetId: sheetId, range });
@@ -126,7 +133,6 @@ exports.handler = async (event) => {
 
         // --- 6. ENVÍO DE CORREOS ---
         console.log("Paso 6: Configurando y enviando correos...");
-        // **MODIFICACIÓN**: Usando ZOHO_USER y ZOHO_PASS
         const transporter = nodemailer.createTransport({
             host: process.env.ZOHO_SMTP_HOST,
             port: process.env.ZOHO_SMTP_PORT,
@@ -137,7 +143,6 @@ exports.handler = async (event) => {
         const fileName = `HC_${data.DOCUMENTO}_Sesion${sessionCountToday}.pdf`;
         
         // Correo para el profesional
-        // **MODIFICACIÓN**: Enviando a ZOHO_USER
         await transporter.sendMail({
             from: `"Asistente HC" <${process.env.ZOHO_USER}>`,
             to: process.env.ZOHO_USER,
