@@ -1,0 +1,10 @@
+# Este comando le dice a Netlify dónde encontrar tus funciones.
+[build]
+  functions = "functions/"
+
+# Esta es la nueva sección que soluciona el problema.
+# Le dice a Netlify que incluya TODOS los archivos .docx que encuentre
+# dentro de la carpeta 'functions' cuando despliegue la función.
+[functions]
+  included_files = ["functions/*.docx"]
+
