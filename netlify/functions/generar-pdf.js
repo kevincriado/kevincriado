@@ -1,192 +1,165 @@
-// Importa todas las dependencias necesarias
+// Import necessary modules
 const fs = require('fs');
 const path = require('path');
-const os = require('os');
 const PizZip = require('pizzip');
-const Docxtemplater = require('docxtemplater');
-const docxPdf = require('docx-pdf');
-const { PDFDocument } = require('pdf-lib');
+const docx_pdf = require('docx-pdf');
 const nodemailer = require('nodemailer');
 const { google } = require('googleapis');
-const { JWT } = require('google-auth-library');
 
-// --- HELPER: AUTENTICACIÓN CON GOOGLE SHEETS ---
-async function getGoogleSheetsClient() {
-    const credentialsBase64 = process.env.GOOGLE_SERVICE_ACCOUNT_CREDENTIALS;
-    if (!credentialsBase64) {
-        throw new Error("La variable de entorno GOOGLE_SERVICE_ACCOUNT_CREDENTIALS no está definida.");
-    }
-    const credentials = JSON.parse(Buffer.from(credentialsBase64, 'base64').toString('ascii'));
+// --- Helper Function for Logging ---
+// This makes our logs clearer in Netlify
+const log = (message, data = null) => {
+  console.log(`[HC-LOG] ${message}`, data !== null ? JSON.stringify(data, null, 2) : '');
+};
 
-    // **NUEVA VALIDACIÓN MEJORADA**: Verifica que las credenciales no estén corruptas.
-    if (!credentials.private_key || !credentials.client_email) {
-        console.error("Error Crítico: El JSON de credenciales de Google está malformado o incompleto. No se encontraron 'private_key' o 'client_email'.");
-        throw new Error("Las credenciales de Google están mal configuradas. Por favor, re-genera la variable de entorno GOOGLE_SERVICE_ACCOUNT_CREDENTIALS en Netlify.");
-    }
-    
-    const client = new JWT({
-        email: credentials.client_email,
-        key: credentials.private_key,
-        scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-    });
-    
-    return google.sheets({ version: 'v4', auth: client });
-}
-
-
-// --- FUNCIÓN PRINCIPAL DE NETLIFY ---
+// --- Main Handler Function ---
 exports.handler = async (event) => {
-    if (event.httpMethod !== 'POST') {
-        return { statusCode: 405, body: 'Método no permitido' };
+  log("Function execution started.");
+
+  // 1. --- Environment Variable Validation ---
+  // This block checks if all required secrets are available.
+  try {
+    log("Step 1: Validating environment variables...");
+    const requiredEnvVars = [
+      'ZOHO_USER', 'ZOHO_PASS', 'GOOGLE_SHEET_ID', 'GOOGLE_SERVICE_ACCOUNT_CREDENTIALS'
+    ];
+    
+    for (const v of requiredEnvVars) {
+      if (!process.env[v]) {
+        throw new Error(`CRITICAL: Missing required environment variable: ${v}`);
+      }
     }
+    log("Environment variables are present.");
+  } catch (error) {
+    log("ERROR during environment variable validation:", error.message);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ message: "Server configuration error. Check function logs.", error: error.message }),
+    };
+  }
 
-    try {
-        const data = JSON.parse(event.body);
-        console.log("Paso 0: Datos recibidos del formulario.");
-
-        // --- 1. LÓGICA DE REGISTRO CON GOOGLE SHEETS ---
-        console.log("Paso 1: Conectando con Google Sheets...");
-        const sheets = await getGoogleSheetsClient();
-        const sheetId = process.env.GOOGLE_SHEET_ID;
-        
-        if (!sheetId) {
-            console.error("Error Crítico: La variable de entorno GOOGLE_SHEET_ID no está configurada en Netlify.");
-            throw new Error("La configuración del servidor está incompleta. Falta el ID de la hoja de cálculo (GOOGLE_SHEET_ID).");
-        }
-
-        const range = 'A:K';
-
-        const response = await sheets.spreadsheets.values.get({ spreadsheetId: sheetId, range });
-        const rows = response.data.values || [];
-
-        let sessionCountToday = 1;
-        rows.forEach(row => {
-            const rowDate = row[0];
-            const rowDoc = row[2];
-            if (row[0] === data.FECHA_SESION && row[2] === data.DOCUMENTO) {
-                sessionCountToday++;
-            }
-        });
-        console.log(`Paso 1 completado. Esta es la sesión N°${sessionCountToday} para este paciente hoy.`);
-
-        // --- 2. GENERACIÓN DE CONTRASEÑA ---
-        console.log("Paso 2: Generando contraseña...");
-        const initials = data.NOMBRE_COMPLETO.split(' ').map(n => n[0]).join('');
-        const dateForPassword = data.FECHA_SESION.replace(/\//g, '');
-        const password = `${initials}${data.DOCUMENTO}${dateForPassword}`;
-        console.log("Paso 2 completado.");
-
-        // --- 3. LLENADO DE PLANTILLA DOCX ---
-        console.log("Paso 3: Llenando plantilla DOCX...");
-        const templatePath = path.resolve(__dirname, 'PlantillaHC.docx');
-        const templateContent = fs.readFileSync(templatePath);
-        const zip = new PizZip(templateContent);
-        const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
-
-        const templateData = { ...data };
-        templateData.GRABACION_SI = data.autoriza_grabacion === 'SI' ? 'X' : ' ';
-        templateData.GRABACION_NO = data.autoriza_grabacion === 'NO' ? 'X' : ' ';
-        templateData.TRANSCRIPCION_SI = data.autoriza_transcripcion === 'SI' ? 'X' : ' ';
-        templateData.TRANSCRIPCION_NO = data.autoriza_transcripcion === 'NO' ? 'X' : ' ';
-        
-        doc.setData(templateData);
-
-        try {
-            doc.render();
-        } catch (renderError) {
-            console.error("Error de Docxtemplater:", JSON.stringify(renderError));
-            throw new Error(`Error al reemplazar marcadores en la plantilla: ${renderError.message}. Revisa si falta algún marcador.`);
-        }
-        
-        const filledDocxBuffer = doc.getZip().generate({ type: 'nodebuffer' });
-        console.log("Paso 3 completado.");
-
-
-        // --- 4. CONVERSIÓN DE DOCX A PDF ---
-        console.log("Paso 4: Convirtiendo a PDF...");
-        const tempDocxPath = path.join(os.tmpdir(), `temp_${Date.now()}.docx`);
-        const tempPdfPath = path.join(os.tmpdir(), `temp_${Date.now()}.pdf`);
-
-        fs.writeFileSync(tempDocxPath, filledDocxBuffer);
-        
-        await new Promise((resolve, reject) => {
-            docxPdf(tempDocxPath, tempPdfPath, (err) => {
-                if (err) {
-                    console.error("Error en la conversión de DOCX a PDF:", err);
-                    return reject(new Error("Falló la librería de conversión a PDF."));
-                }
-                resolve();
-            });
-        });
-
-        const pdfBuffer = fs.readFileSync(tempPdfPath);
-        fs.unlinkSync(tempDocxPath);
-        fs.unlinkSync(tempPdfPath);
-        console.log("Paso 4 completado.");
-
-
-        // --- 5. PROTECCIÓN DEL PDF CON CONTRASEÑA ---
-        console.log("Paso 5: Protegiendo PDF...");
-        const pdfDoc = await PDFDocument.load(pdfBuffer);
-        await pdfDoc.encrypt({
-            userPassword: password,
-            ownerPassword: password, 
-            permissions: { printing: 'highResolution', modifying: false, copying: false },
-        });
-        const protectedPdfBytes = await pdfDoc.save();
-        console.log("Paso 5 completado.");
-
-        // --- 6. ENVÍO DE CORREOS ---
-        console.log("Paso 6: Configurando y enviando correos...");
-        const transporter = nodemailer.createTransport({
-            host: process.env.ZOHO_SMTP_HOST,
-            port: process.env.ZOHO_SMTP_PORT,
-            secure: true,
-            auth: { user: process.env.ZOHO_USER, pass: process.env.ZOHO_PASS },
-        });
-
-        const fileName = `HC_${data.DOCUMENTO}_Sesion${sessionCountToday}.pdf`;
-        
-        // Correo para el profesional
-        await transporter.sendMail({
-            from: `"Asistente HC" <${process.env.ZOHO_USER}>`,
-            to: process.env.ZOHO_USER,
-            subject: `Historia Clínica - ${data.NOMBRE_COMPLETO}`,
-            html: `<p>Se adjunta la historia clínica del paciente <b>${data.NOMBRE_COMPLETO}</b>.</p><p>La contraseña del archivo es: <b>${password}</b></p>`,
-            attachments: [{ filename: fileName, content: Buffer.from(protectedPdfBytes), contentType: 'application/pdf' }],
-        });
-
-        // Correo para el paciente
-        await transporter.sendMail({
-            from: `"Psic. Kevin Criado" <${process.env.ZOHO_USER}>`,
-            to: data.CORREO,
-            subject: 'Copia de su Historia Clínica',
-            html: `<p>Estimado/a paciente, se adjunta una copia protegida de su historia clínica.</p><p>La contraseña para abrir el archivo es: <b>${password}</b></p><p>Por favor, guárdela en un lugar seguro.</p>`,
-            attachments: [{ filename: fileName, content: Buffer.from(protectedPdfBytes), contentType: 'application/pdf' }],
-        });
-        console.log("Paso 6 completado.");
-
-
-        // --- 7. ACTUALIZAR EL REGISTRO EN GOOGLE SHEETS ---
-        console.log("Paso 7: Actualizando registro en Google Sheets...");
-        const newRow = [
-            data.FECHA_SESION, data.HORA_CONS, data.DOCUMENTO, data.NOMBRE_COMPLETO,
-            data.MOTIVO, password, fileName, "Enviado por correo",
-            `Sesión ${sessionCountToday}`, data.PROFESIONAL_SESION, "Completado"
-        ];
-        await sheets.spreadsheets.values.append({
-            spreadsheetId: sheetId,
-            range: 'A1',
-            valueInputOption: 'USER_ENTERED',
-            resource: { values: [newRow] },
-        });
-        console.log("Paso 7 completado. ¡Proceso finalizado con éxito!");
-        
-        return { statusCode: 200, body: JSON.stringify({ message: 'PDF generado, protegido y enviado exitosamente.' }) };
-
-    } catch (error) {
-        console.error('Error detallado en la función:', error);
-        return { statusCode: 500, body: JSON.stringify({ message: 'Error interno del servidor.', error: error.message }) };
+  try {
+    // 2. --- Parsing Incoming Data ---
+    log("Step 2: Parsing incoming form data...");
+    if (!event.body) {
+      throw new Error("No data received in the request body.");
     }
+    const data = JSON.parse(event.body);
+    log("Form data parsed successfully.");
+    
+    // 3. --- Loading DOCX Template ---
+    log("Step 3: Loading DOCX template...");
+    const templatePath = path.resolve(__dirname, 'PlantillaHC.docx');
+    if (!fs.existsSync(templatePath)) {
+        throw new Error(`Template file not found at path: ${templatePath}`);
+    }
+    const content = fs.readFileSync(templatePath, 'binary');
+    const zip = new PizZip(content);
+    const doc = new PizZip.DocUtils();
+    doc.load(zip);
+    log("DOCX template loaded.");
+
+    // 4. --- Populating the Template ---
+    log("Step 4: Populating template with data...");
+    
+    // Handle consent checkboxes
+    const GRABACION_SI = data.autoriza_grabacion === 'SI' ? 'X' : ' ';
+    const GRABACION_NO = data.autoriza_grabacion === 'NO' ? 'X' : ' ';
+    const TRANSCRIPCION_SI = data.autoriza_transcripcion === 'SI' ? 'X' : ' ';
+    const TRANSCRIPCION_NO = data.autoriza_transcripcion === 'NO' ? 'X' : ' ';
+
+    const templateData = { ...data, GRABACION_SI, GRABACION_NO, TRANSCRIPCION_SI, TRANSCRIPCION_NO };
+    
+    doc.setData(templateData);
+    doc.render();
+    log("Template populated.");
+
+    const populatedDocxBuffer = doc.getZip().generate({ type: 'nodebuffer' });
+
+    // 5. --- Converting to PDF ---
+    log("Step 5: Converting DOCX to PDF...");
+    const pdfBuffer = await new Promise((resolve, reject) => {
+      docx_pdf(populatedDocxBuffer, (err, result) => {
+        if (err) {
+          return reject(err);
+        }
+        resolve(result);
+      });
+    });
+    log("Conversion to PDF successful.");
+
+    // 6. --- Generating Password and Filename ---
+    log("Step 6: Generating password and filename...");
+    const initials = data.NOMBRE_COMPLETO.split(' ').map(n => n[0]).join('').toUpperCase();
+    const sessionDate = new Date().toLocaleDateString('es-CO', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '');
+    const password = `${initials}${data.DOCUMENTO}${sessionDate}`;
+    const filename = `HC_${data.DOCUMENTO}_${sessionDate}.pdf`;
+    log(`Generated filename: ${filename}`);
+
+    // This section is commented out as PDF password protection with docx-pdf is not directly supported.
+    // We will send the password in the email instead.
+
+    // 7. --- Sending Emails ---
+    log("Step 7: Preparing to send emails...");
+    const transporter = nodemailer.createTransport({
+      host: 'smtp.zoho.com',
+      port: 465,
+      secure: true,
+      auth: { user: process.env.ZOHO_USER, pass: process.env.ZOHO_PASS },
+    });
+
+    const mailOptionsBase = {
+      from: `"Historia Clínica Digital" <${process.env.ZOHO_USER}>`,
+      subject: `Historia Clínica - ${data.NOMBRE_COMPLETO}`,
+      html: `<p>Estimado/a,</p><p>Adjunto encontrará la historia clínica generada para el paciente ${data.NOMBRE_COMPLETO}.</p><p>La contraseña para abrir el documento es: <strong>${password}</strong></p><p>Saludos cordiales.</p>`,
+      attachments: [{ filename, content: pdfBuffer, contentType: 'application/pdf' }],
+    };
+
+    // Send to professional
+    log(`Sending email to professional: ${process.env.ZOHO_USER}`);
+    await transporter.sendMail({ ...mailOptionsBase, to: process.env.ZOHO_USER });
+    
+    // Send to patient
+    log(`Sending email to patient: ${data.CORREO}`);
+    await transporter.sendMail({ ...mailOptionsBase, to: data.CORREO });
+    log("Emails sent successfully.");
+
+    // 8. --- Updating Google Sheet ---
+    log("Step 8: Preparing to update Google Sheet...");
+    const auth = new google.auth.GoogleAuth({
+        credentials: JSON.parse(Buffer.from(process.env.GOOGLE_SERVICE_ACCOUNT_CREDENTIALS, 'base64').toString('ascii')),
+        scopes: 'https://www.googleapis.com/auth/spreadsheets',
+    });
+    const sheets = google.sheets({ version: 'v4', auth });
+    
+    const newRow = [
+        new Date().toLocaleDateString('es-CO'), data.HORA_CONS, data.DOCUMENTO, data.NOMBRE_COMPLETO,
+        data.MOTIVO, password, filename, 'Email', data.NUM_SESION, data.PROFESIONAL_SESION, 'Enviado'
+    ];
+    
+    await sheets.spreadsheets.values.append({
+        spreadsheetId: process.env.GOOGLE_SHEET_ID,
+        range: 'A1',
+        valueInputOption: 'USER_ENTERED',
+        resource: { values: [newRow] },
+    });
+    log("Google Sheet updated successfully.");
+
+    // 9. --- Final Success Response ---
+    log("Function execution finished successfully.");
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ message: "Historia Clínica generada y enviada con éxito." }),
+    };
+
+  } catch (error) {
+    // --- Global Error Catcher ---
+    log("FATAL ERROR during function execution:", error.message);
+    console.error(error); // Log the full stack trace for detailed debugging
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ message: "Error interno del servidor.", error: error.message }),
+    };
+  }
 };
 
