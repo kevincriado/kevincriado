@@ -1,22 +1,9 @@
 {
   "name": "netlify-backend-functions",
   "version": "1.0.0",
-  "description": "Dependencias para las funciones de Netlify: generador de HC y generador de firmas.",
-  "main": "index.js",
+  "description": "Dependencias para las funciones de Netlify.",
   "dependencies": {
-    "docx-pdf": "^0.0.1",
-    "nodemailer": "^6.9.14",
-    "pizzip": "^3.1.7"
-  },
-  "devDependencies": {
-    "@types/node": "^20.14.9",
-    "typescript": "^5.5.2"
-  },
-  "scripts": {
-    "build": "echo 'No build step required for functions on deploy'"
-  },
-  "keywords": [],
-  "author": "Kevin Criado",
-  "license": "ISC"
+    "nodemailer": "^6.9.14"
+  }
 }
 
