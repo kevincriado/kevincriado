@@ -8,10 +8,15 @@
     "nodemailer": "^6.9.14",
     "pizzip": "^3.1.7"
   },
+  "devDependencies": {
+    "@types/node": "^20.14.9",
+    "typescript": "^5.5.2"
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "echo 'No build step required for functions on deploy'"
   },
   "keywords": [],
   "author": "Kevin Criado",
   "license": "ISC"
 }
+
