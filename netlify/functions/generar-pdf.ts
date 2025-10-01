@@ -1,17 +1,18 @@
-// --- Main Handler Function for Testing ---
-exports.handler = async (event) => {
+import { Handler, HandlerEvent, HandlerContext } from "@netlify/functions";
+
+const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
   try {
-    // This function ignores the form data and just returns a success message.
-    // This tests if the connection between the frontend and the function is working.
+    // Esta función de prueba confirma que la nueva estructura funciona.
     return {
       statusCode: 200,
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
-        message: "¡La prueba funcionó! La comunicación con Netlify es correcta.",
+        message: "¡ÉXITO! La nueva estructura de función con TypeScript está funcionando.",
       }),
     };
-
   } catch (error) {
-    // If even this simple function fails, it will return an error.
     return {
       statusCode: 500,
       body: JSON.stringify({
@@ -21,3 +22,5 @@ exports.handler = async (event) => {
     };
   }
 };
+
+export { handler };
