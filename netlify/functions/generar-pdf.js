@@ -4,17 +4,13 @@ const path = require('path');
 const PizZip = require('pizzip');
 const docx_pdf = require('docx-pdf');
 const nodemailer = require('nodemailer');
-const { google } = require('googleapis');
+const PDFDocument = require('pdfkit');
 
 // --- Main Handler Function ---
 exports.handler = async (event) => {
-  // We will wrap the entire function in a try-catch block
-  // to send detailed errors back to the frontend.
   try {
     // Step 1: Validate Environment Variables
-    const requiredEnvVars = [
-      'ZOHO_USER', 'ZOHO_PASS', 'GOOGLE_SHEET_ID', 'GOOGLE_SERVICE_ACCOUNT_CREDENTIALS'
-    ];
+    const requiredEnvVars = ['ZOHO_USER', 'ZOHO_PASS'];
     for (const v of requiredEnvVars) {
       if (!process.env[v]) {
         throw new Error(`Configuración del servidor incompleta: Falta la variable de entorno '${v}'.`);
@@ -46,7 +42,7 @@ exports.handler = async (event) => {
     const populatedDocxBuffer = doc.getZip().generate({ type: 'nodebuffer' });
 
     // Step 5: Convert to PDF
-    const pdfBuffer = await new Promise((resolve, reject) => {
+    const hcPdfBuffer = await new Promise((resolve, reject) => {
         docx_pdf(populatedDocxBuffer, (err, result) => {
             if (err) return reject(new Error("Falló la conversión del documento a PDF."));
             resolve(result);
@@ -57,78 +53,92 @@ exports.handler = async (event) => {
     const initials = data.NOMBRE_COMPLETO.split(' ').map(n => n[0]).join('').toUpperCase();
     const sessionDate = new Date().toLocaleDateString('es-CO', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '');
     const password = `${initials}${data.DOCUMENTO}${sessionDate}`;
-    const filename = `HC_${data.DOCUMENTO}_${sessionDate}.pdf`;
+    const hcFilename = `HC_${data.DOCUMENTO}_${sessionDate}.pdf`;
+    const logFilename = `Registro_HC_${data.DOCUMENTO}_${sessionDate}.pdf`;
 
-    // Step 7: Send Emails
-    let transporter;
-    try {
-        transporter = nodemailer.createTransport({
-            host: 'smtp.zoho.com', port: 465, secure: true,
-            auth: { user: process.env.ZOHO_USER, pass: process.env.ZOHO_PASS },
+    // Step 7: Generate Log PDF from scratch
+    const logPdfBuffer = await new Promise((resolve) => {
+        const doc = new PDFDocument({ margin: 50 });
+        const buffers = [];
+        doc.on('data', buffers.push.bind(buffers));
+        doc.on('end', () => {
+            resolve(Buffer.concat(buffers));
         });
-    } catch (e) {
-        throw new Error("Error al configurar el servicio de correo (transporter).");
-    }
 
-    const mailOptionsBase = {
+        // --- Content of the Log PDF ---
+        doc.fontSize(18).font('Helvetica-Bold').text('Registro de Sesión', { align: 'center' });
+        doc.moveDown(2);
+
+        const addField = (label, value) => {
+            doc.fontSize(12).font('Helvetica-Bold').text(label, { continued: true }).font('Helvetica').text(`: ${value || 'N/A'}`);
+            doc.moveDown(0.5);
+        };
+
+        addField('Fecha', new Date().toLocaleDateString('es-CO'));
+        addField('Hora', data.HORA_CONS);
+        addField('Cédula', data.DOCUMENTO);
+        addField('Nombre', data.NOMBRE_COMPLETO);
+        addField('Motivo', data.MOTIVO);
+        addField('Contraseña Generada', password);
+        addField('Archivo HC', hcFilename);
+        addField('Sesión No.', data.NUM_SESION);
+        addField('Profesional', data.PROFESIONAL_SESION);
+        addField('Estado', 'Enviado');
+        // --- End of content ---
+
+        doc.end();
+    });
+
+    // Step 8: Send Emails
+    const transporter = nodemailer.createTransport({
+        host: 'smtp.zoho.com', port: 465, secure: true,
+        auth: { user: process.env.ZOHO_USER, pass: process.env.ZOHO_PASS },
+    });
+
+    // --- Email to Professional ---
+    const professionalMailOptions = {
         from: `"Historia Clínica Digital" <${process.env.ZOHO_USER}>`,
+        to: process.env.ZOHO_USER,
         subject: `Historia Clínica - ${data.NOMBRE_COMPLETO}`,
-        html: `<p>Estimado/a,</p><p>Adjunto encontrará la historia clínica generada para el paciente ${data.NOMBRE_COMPLETO}.</p><p>La contraseña para abrir el documento es: <strong>${password}</strong></p><p>Saludos cordiales.</p>`,
-        attachments: [{ filename, content: pdfBuffer, contentType: 'application/pdf' }],
+        html: `<p>Hola,</p><p>Se ha generado una nueva historia clínica para el paciente <strong>${data.NOMBRE_COMPLETO}</strong>.</p><p>La contraseña para el archivo de HC es: <strong>${password}</strong></p><p>Se adjuntan la historia clínica y el registro de la sesión.</p>`,
+        attachments: [
+            { filename: hcFilename, content: hcPdfBuffer, contentType: 'application/pdf' },
+            { filename: logFilename, content: logPdfBuffer, contentType: 'application/pdf' }
+        ],
+    };
+
+    // --- Email to Patient ---
+    const patientMailOptions = {
+        from: `"Historia Clínica Digital" <${process.env.ZOHO_USER}>`,
+        to: data.CORREO,
+        subject: `Copia de tu Historia Clínica`,
+        html: `<p>Estimado/a ${data.NOMBRE_COMPLETO},</p><p>Adjunto encontrarás una copia de la historia clínica generada en tu reciente consulta.</p><p>Este es un documento confidencial. Por favor, guárdalo en un lugar seguro.</p><p>Saludos cordiales.</p>`,
+        attachments: [{ filename: hcFilename, content: hcPdfBuffer, contentType: 'application/pdf' }],
     };
     
-    // Using Promise.all to send emails concurrently
+    // Send both emails concurrently
     await Promise.all([
-        transporter.sendMail({ ...mailOptionsBase, to: process.env.ZOHO_USER }),
-        transporter.sendMail({ ...mailOptionsBase, to: data.CORREO })
+        transporter.sendMail(professionalMailOptions),
+        transporter.sendMail(patientMailOptions)
     ]).catch(emailError => {
-        throw new Error(`Error al enviar los correos electrónicos. Verifica las credenciales de Zoho y los destinatarios. Detalles: ${emailError.message}`);
+        throw new Error(`Error al enviar los correos electrónicos. Verifica las credenciales de Zoho. Detalles: ${emailError.message}`);
     });
 
-    // Step 8: Update Google Sheet
-    let sheets;
-    try {
-        const credentials = JSON.parse(Buffer.from(process.env.GOOGLE_SERVICE_ACCOUNT_CREDENTIALS, 'base64').toString('ascii'));
-        const auth = new google.auth.GoogleAuth({
-            credentials,
-            scopes: 'https://www.googleapis.com/auth/spreadsheets',
-        });
-        sheets = google.sheets({ version: 'v4', auth });
-    } catch (e) {
-        throw new Error(`Error de autenticación con Google. Verifica la variable GOOGLE_SERVICE_ACCOUNT_CREDENTIALS. Detalles: ${e.message}`);
-    }
-    
-    const newRow = [
-        new Date().toLocaleDateString('es-CO'), data.HORA_CONS, data.DOCUMENTO, data.NOMBRE_COMPLETO,
-        data.MOTIVO, password, filename, 'Email', data.NUM_SESION, data.PROFESIONAL_SESION, 'Enviado'
-    ];
-
-    await sheets.spreadsheets.values.append({
-        spreadsheetId: process.env.GOOGLE_SHEET_ID,
-        range: 'A1',
-        valueInputOption: 'USER_ENTERED',
-        resource: { values: [newRow] },
-    }).catch(sheetError => {
-        throw new Error(`Error al escribir en Google Sheets. Verifica el ID de la hoja y los permisos de la cuenta de servicio. Detalles: ${sheetError.message}`);
-    });
-    
     // Final Success Response
     return {
         statusCode: 200,
-        body: JSON.stringify({ message: "Historia Clínica generada y enviada con éxito." }),
+        body: JSON.stringify({ message: "Historia Clínica y Registro generados y enviados con éxito." }),
     };
 
   } catch (error) {
-    // This block catches any error from the steps above and sends it to the frontend.
-    console.error("--- FUNCTION FAILED ---");
-    console.error(error);
+    console.error("--- FUNCTION FAILED ---", error);
     return {
         statusCode: 500,
         body: JSON.stringify({
             message: "Error interno del servidor.",
-            // We send the specific error message back for debugging.
             error: error.message || "Ocurrió un error desconocido."
         }),
     };
   }
 };
+
