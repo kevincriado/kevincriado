@@ -1,19 +1,19 @@
-# Este comando le dice a Netlify dónde encontrar tus funciones.
+# Configuración de compilación
 [build]
+  # Directorio donde Netlify encontrará tus funciones
   functions = "functions/"
-  # Especifica el directorio de publicación, asumiendo que tu HTML está en la raíz.
+  # Directorio donde está tu página principal (la raíz)
   publish = "."
 
-# Esta sección incluye la plantilla DOCX en el paquete de la función.
+# Incluir archivos adicionales en el paquete de la función
 [functions]
   included_files = ["functions/PlantillaHC.docx"]
 
-# --- ¡REGLA DE REDIRECCIÓN FINAL Y FORZADA! ---
-# El "force = true" asegura que esta regla anule cualquier otro
-# comportamiento por defecto de Netlify, solucionando el error.
+# --- REGLA DE REDIRECCIÓN FORZADA ---
+# Esta es la regla más importante. Le dice a Netlify que cualquier
+# solicitud a /api/... debe ser enviada a tus funciones.
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
   force = true
-
