@@ -1,15 +1,12 @@
 {
-  "name": "netlify-clinical-functions",
+  "name": "netlify-backend-functions",
   "version": "1.0.0",
-  "description": "Dependencias para las Netlify Functions de firma y generación de HC.",
+  "description": "Dependencias para las funciones de Netlify: generador de HC y generador de firmas.",
   "main": "index.js",
   "dependencies": {
-    "docxtemplater": "^3.47.2",
     "docx-pdf": "^0.0.1",
-    "google-auth-library": "^9.11.0",
-    "googleapis": "^140.0.1",
     "nodemailer": "^6.9.14",
-    "pdf-lib": "^1.17.1",
+    "pdfkit": "^0.15.0",
     "pizzip": "^3.1.7"
   },
   "scripts": {
@@ -19,3 +16,4 @@
   "author": "Kevin Criado",
   "license": "ISC"
 }
+
