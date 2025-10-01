@@ -5,12 +5,3 @@
 # Esta sección incluye la plantilla DOCX en el paquete de la función.
 [functions]
   included_files = ["functions/PlantillaHC.docx"]
-
-# --- ¡REGLA DE REDIRECCIÓN FINAL Y FORZADA! ---
-# El "force = true" asegura que esta regla anule cualquier otro
-# comportamiento por defecto de Netlify, solucionando el error.
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
-  force = true
