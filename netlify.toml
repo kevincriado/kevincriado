@@ -5,7 +5,7 @@
 # Regla de redirección forzada y directa
 [[redirects]]
   from = "/api/*"
-  to = "/.netlify/functions/:spl-at"
+  to = "/.netlify/functions/:splat"
   status = 200
   force = true
 
