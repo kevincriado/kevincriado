@@ -437,34 +437,45 @@
                     });
 
                     if (response.ok) {
-                        const blob = await response.blob();
-                        const filenameHeader = response.headers.get('Content-Disposition');
-                        let filename = 'HistoriaClinica.pdf'; // Default filename
-                        if (filenameHeader) {
-                            const parts = filenameHeader.split('filename=');
-                            if (parts.length === 2) {
-                                filename = parts[1].replace(/"/g, '');
+                        const contentType = response.headers.get("content-type");
+                        if (contentType && contentType.includes("application/pdf")) {
+                            const blob = await response.blob();
+                            const filenameHeader = response.headers.get('Content-Disposition');
+                            let filename = 'HistoriaClinica.pdf'; // Default filename
+                            if (filenameHeader) {
+                                const parts = filenameHeader.split('filename=');
+                                if (parts.length === 2) {
+                                    filename = parts[1].replace(/"/g, '');
+                                }
                             }
-                        }
 
-                        const url = window.URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.style.display = 'none';
-                        a.href = url;
-                        a.download = filename;
-                        document.body.appendChild(a);
-                        a.click();
-                        window.URL.revokeObjectURL(url);
-                        a.remove();
-                        showStatusModal("¡Éxito!", "La Historia Clínica se ha descargado correctamente.", true);
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.style.display = 'none';
+                            a.href = url;
+                            a.download = filename;
+                            document.body.appendChild(a);
+                            a.click();
+                            window.URL.revokeObjectURL(url);
+                            a.remove();
+                            showStatusModal("¡Éxito!", "La Historia Clínica se ha descargado correctamente.", true);
+                        } else {
+                             // If the server sends a JSON success message instead of a file
+                            const result = await response.json();
+                             showStatusModal("Información", result.message || "La operación se completó pero no se recibió un archivo.", true);
+                        }
                     } else {
-                        // If the server returned an error, it should be in JSON format
+                        // If the server returned an error, it MUST be in JSON format
                         const errorResult = await response.json();
-                        throw new Error(errorResult.error || 'Ocurrió un error en el servidor.');
+                        throw new Error(errorResult.error || 'Ocurrió un error desconocido en el servidor.');
                     }
                 } catch (error) {
-                    console.error('Error:', error);
-                    showStatusModal("Error", `No se pudo completar la solicitud: ${error.message}`, true);
+                    if (error instanceof SyntaxError) {
+                        showStatusModal("Error de Comunicación", "El servidor respondió con un formato inesperado (HTML). Verifica la configuración de enrutamiento en Netlify (archivo netlify.toml).", true);
+                    } else {
+                         console.error('Error:', error);
+                         showStatusModal("Error", `No se pudo completar la solicitud: ${error.message}`, true);
+                    }
                 }
             }
             
@@ -474,7 +485,7 @@
             nextBtn.addEventListener("click", () => nextPrev(1));
             document.getElementById("F_NACIMIENTO").addEventListener("change", calculateAge);
             form.addEventListener('input', checkFormValidity);
-            pdfBtn.addEventListener("click", generateAndDownloadPdf); // Changed to the new function
+            pdfBtn.addEventListener("click", generateAndDownloadPdf);
 
             statusCloseBtn.addEventListener("click", () => statusModal.classList.remove("visible"));
 
@@ -515,4 +526,3 @@
     </script>
 </body>
 </html>
-
