@@ -1,11 +1,11 @@
-# Configuración de compilación mínima y explícita
+# Configuración de compilación final
 [build]
   functions = "functions/"
-  publish = "."
 
 # Regla de redirección forzada y directa
 [[redirects]]
   from = "/api/*"
-  to = "/.netlify/functions/:splat"
+  to = "/.netlify/functions/:spl-at"
   status = 200
   force = true
+
