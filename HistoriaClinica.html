@@ -248,8 +248,8 @@
                 <button type="button" id="clearSectionBtn" class="action-btn glass-effect" title="Limpiar sección actual">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9.75L14.25 12m0 0l2.25 2.25M14.25 12l2.25-2.25M14.25 12L12 14.25m-2.58 4.92l-6.375-6.375a1.125 1.125 0 010-1.59L9.42 4.83c.211-.211.498-.33.796-.33H19.5a2.25 2.25 0 012.25 2.25v10.5a2.25 2.25 0 01-2.25 2.25h-9.284c-.298 0-.585-.119-.796-.33z" /></svg>
                 </button>
-                <button type="button" id="pdfBtn" class="action-btn glass-effect" title="Generar PDF y Enviar" disabled>
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" /></svg>
+                <button type="button" id="pdfBtn" class="action-btn glass-effect" title="Generar PDF y Descargar" disabled>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
                 </button>
                 <button type="button" id="resetFormBtn" class="action-btn glass-effect" title="Empezar de nuevo">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0011.664 0l3.18-3.185m-3.181-4.995l-3.182-3.182a8.25 8.25 0 00-11.664 0l-3.18 3.185" /></svg>
@@ -264,7 +264,7 @@
     <div id="status-modal" class="modal-overlay">
         <div class="modal-content glass-effect">
             <h3 id="status-title">Procesando...</h3>
-            <p id="status-message">Por favor, espera mientras se genera y envía la historia clínica.</p>
+            <p id="status-message">Por favor, espera mientras se genera la historia clínica.</p>
             <button id="status-close-btn" class="nav-btn modal-close-btn" style="display: none;">Cerrar</button>
         </div>
     </div>
@@ -410,10 +410,7 @@
                 const formData = {};
                 const inputs = form.querySelectorAll("input, select, textarea");
                 inputs.forEach(input => {
-                    // Solo añade los campos que tienen un ID (todos los relevantes lo tienen)
-                    if (input.id) {
-                        formData[input.id] = input.value;
-                    }
+                    if (input.id) formData[input.id] = input.value;
                 });
                 return formData;
             }
@@ -425,42 +422,49 @@
                 statusModal.classList.add('visible');
             }
 
-            async function generateAndSendPdf() {
+            async function generateAndDownloadPdf() {
                 if (!validateStep(currentStep)) return; 
                 
-                showStatusModal("Procesando...", "Por favor, espera mientras se genera y envía la historia clínica.");
+                showStatusModal("Procesando...", "Por favor, espera mientras se genera la historia clínica.");
                 
                 const formData = gatherFormData();
 
                 try {
-                    // --- ¡CAMBIO IMPORTANTE! ---
-                    // La URL ahora apunta a /api/ en lugar de la ruta larga.
                     const response = await fetch('/api/generar-pdf', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(formData),
                     });
 
-                    // Aquí es donde ocurre el error si la respuesta no es JSON
-                    const result = await response.json();
-
                     if (response.ok) {
-                        showStatusModal("¡Éxito!", "La Historia Clínica ha sido generada y enviada correctamente.", true);
+                        const blob = await response.blob();
+                        const filenameHeader = response.headers.get('Content-Disposition');
+                        let filename = 'HistoriaClinica.pdf'; // Default filename
+                        if (filenameHeader) {
+                            const parts = filenameHeader.split('filename=');
+                            if (parts.length === 2) {
+                                filename = parts[1].replace(/"/g, '');
+                            }
+                        }
+
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.style.display = 'none';
+                        a.href = url;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        a.remove();
+                        showStatusModal("¡Éxito!", "La Historia Clínica se ha descargado correctamente.", true);
                     } else {
-                        throw new Error(result.message || 'Ocurrió un error en el servidor.');
+                        // If the server returned an error, it should be in JSON format
+                        const errorResult = await response.json();
+                        throw new Error(errorResult.error || 'Ocurrió un error en el servidor.');
                     }
                 } catch (error) {
                     console.error('Error:', error);
-                    // Intenta obtener un mensaje de error más detallado del objeto de error.
-                    let details = error.message;
-                    if (error.error) { // Si el servidor nos dio un detalle en el JSON de error
-                        details += `. Detalles: ${error.error}`;
-                    } else if (error.toString().includes("is not valid JSON")){
-                         details = "La respuesta del servidor no fue la esperada. Revisa los logs de la función en Netlify para más detalles.";
-                    }
-                    showStatusModal("Error", `No se pudo completar la solicitud: ${details}`, true);
+                    showStatusModal("Error", `No se pudo completar la solicitud: ${error.message}`, true);
                 }
             }
             
@@ -470,7 +474,7 @@
             nextBtn.addEventListener("click", () => nextPrev(1));
             document.getElementById("F_NACIMIENTO").addEventListener("change", calculateAge);
             form.addEventListener('input', checkFormValidity);
-            pdfBtn.addEventListener("click", generateAndSendPdf);
+            pdfBtn.addEventListener("click", generateAndDownloadPdf); // Changed to the new function
 
             statusCloseBtn.addEventListener("click", () => statusModal.classList.remove("visible"));
 
@@ -511,3 +515,4 @@
     </script>
 </body>
 </html>
+
