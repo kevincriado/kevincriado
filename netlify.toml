@@ -1,17 +1,9 @@
-# Configuración de compilación
+# Configuración de compilación mínima y explícita
 [build]
-  # Directorio donde Netlify encontrará tus funciones
   functions = "functions/"
-  # Directorio donde está tu página principal (la raíz)
   publish = "."
 
-# Incluir archivos adicionales en el paquete de la función
-[functions]
-  included_files = ["functions/PlantillaHC.docx"]
-
-# --- REGLA DE REDIRECCIÓN FORZADA ---
-# Esta es la regla más importante. Le dice a Netlify que cualquier
-# solicitud a /api/... debe ser enviada a tus funciones.
+# Regla de redirección forzada y directa
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
