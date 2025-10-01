@@ -6,7 +6,6 @@
   "dependencies": {
     "docx-pdf": "^0.0.1",
     "nodemailer": "^6.9.14",
-    "pdfkit": "^0.15.0",
     "pizzip": "^3.1.7"
   },
   "scripts": {
@@ -16,4 +15,3 @@
   "author": "Kevin Criado",
   "license": "ISC"
 }
-
