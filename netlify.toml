@@ -1,11 +1,12 @@
-# Configuración de compilación final
+# Este es el único comando de construcción necesario ahora.
+# Netlify detectará automáticamente la carpeta netlify/functions.
 [build]
-  functions = "functions/"
+  command = "npm run build" # Este comando es opcional pero recomendado
+  publish = "." # Directorio donde está tu index.html
 
-# Regla de redirección forzada y directa
+# La redirección se mantiene igual, es la forma correcta de hacerlo.
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
   force = true
-
