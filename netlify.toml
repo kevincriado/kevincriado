@@ -7,12 +7,19 @@
   # Directorio donde están tus funciones
   functions = "functions/"
 
+# Esta sección especifica la versión de Python que se debe usar,
+# resolviendo el error de "definición no encontrada".
+[build.environment]
+  PYTHON_VERSION = "3.8"
+
 # Redirección para crear una URL de API limpia
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
   force = true
+
+
 
 
 
