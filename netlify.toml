@@ -7,14 +7,14 @@
   # Directorio donde están tus funciones
   functions = "functions/"
 
-# Especifica la versión de Python a usar
+# Especifica la versión de Python a usar de la manera correcta
 [build.environment]
   PYTHON_VERSION = "3.8"
 
-# Redirección para crear una URL de API limpia (con el typo corregido)
+# Redirección para crear una URL de API limpia
 [[redirects]]
   from = "/api/*"
-  to = "/.netlify/functions/:splat" # CORREGIDO: sin el guion
+  to = "/.netlify/functions/:splat"
   status = 200
   force = true
 
