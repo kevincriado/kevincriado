@@ -430,7 +430,9 @@
                 const formData = gatherFormData();
 
                 try {
-                    const response = await fetch('/api/generar-pdf', {
+                    // *** THIS IS THE CORRECTED LINE ***
+                    // We call the clean API URL defined in our netlify.toml
+                    const response = await fetch('/api/generar_pdf', { 
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(formData),
@@ -441,7 +443,7 @@
                         if (contentType && contentType.includes("application/pdf")) {
                             const blob = await response.blob();
                             const filenameHeader = response.headers.get('Content-Disposition');
-                            let filename = 'HistoriaClinica.pdf'; // Default filename
+                            let filename = 'HistoriaClinica.pdf';
                             if (filenameHeader) {
                                 const parts = filenameHeader.split('filename=');
                                 if (parts.length === 2) {
@@ -455,7 +457,7 @@
                             a.href = url;
                             a.download = filename;
                             document.body.appendChild(a);
-a.click();
+                            a.click();
                             window.URL.revokeObjectURL(url);
                             a.remove();
                             showStatusModal("¡Éxito!", "La Historia Clínica se ha descargado correctamente.", true);
@@ -469,7 +471,7 @@ a.click();
                     }
                 } catch (error) {
                     if (error instanceof SyntaxError) {
-                        showStatusModal("Error de Comunicación", "El servidor respondió con un formato inesperado (HTML). Verifica la configuración de enrutamiento en Netlify (archivo netlify.toml).", true);
+                        showStatusModal("Error de Comunicación", "El servidor respondió con un formato inesperado (HTML). Verifica la configuración de enrutamiento en Netlify.", true);
                     } else {
                          console.error('Error:', error);
                          showStatusModal("Error", `No se pudo completar la solicitud: ${error.message}`, true);

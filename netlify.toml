@@ -1,10 +1,12 @@
-# Configuración mínima para el diagnóstico con la CLI
+# Configuración de compilación final para Python
 [build]
-  functions = "functions/"
   publish = "."
+  functions = "functions/"
 
+# Redirección para crear una URL de API limpia
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
   force = true
+
