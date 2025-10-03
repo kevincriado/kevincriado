@@ -29,6 +29,12 @@ def handler(event, context):
         data = json.loads(event.get('body'))
         
         # Adobe espera los datos bajo una clave raíz para la plantilla
+        # También manejamos los checkboxes de consentimiento aquí
+        data['GRABACION_SI'] = 'X' if data.get('autoriza_grabacion') == 'SI' else ' '
+        data['GRABACION_NO'] = 'X' if data.get('autoriza_grabacion') == 'NO' else ' '
+        data['TRANSCRIPCION_SI'] = 'X' if data.get('autoriza_transcripcion') == 'SI' else ' '
+        data['TRANSCRIPCION_NO'] = 'X' if data.get('autoriza_transcripcion') == 'NO' else ' '
+        
         json_data_for_merge = {"hc": data}
 
         # 3. --- Adobe API Authentication (New Method) ---
@@ -57,7 +63,7 @@ def handler(event, context):
         # The result is a StreamAsset
         result_stream: StreamAsset = pdf_services_response.get_asset()
         
-        # Read the content stream into a buffer
+        # We read the content stream into a buffer
         pdf_buffer = result_stream.get_input_stream().read()
 
         # 6. --- Generate Filename and send to browser ---

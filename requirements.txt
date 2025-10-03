@@ -1,1 +1,1 @@
-adobe-pdfservices-sdk==3.3.0
+adobe-pdfservices-sdk
