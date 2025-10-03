@@ -88,7 +88,7 @@
     <div class="container glass-effect">
         <h1>Historia Clínica Psicológica</h1>
         <p class="legal-subtitle">
-            La historia clínica se regirá por lo establecido en la Ley 23 de 1981, la Resolución 1995 de 1999 y la Resolución 839 de 2017, garantizando la confidencialidad, seguridad y acceso restringido de la información. El paciente podrá revocar en cualquier momento las autorizaciones otorgadas en el presente documento, en los términos de la Ley 1581 de 2012.
+            Al finalizar, se iniciará el proceso de generación del PDF, que será enviado a tu correo electrónico en unos momentos.
         </p>
 
         <div class="progress-bar glass-effect">
@@ -117,7 +117,6 @@
                                 <option value="NO">No autorizar</option>
                                 <option value="SI">Autorizar</option>
                             </select>
-                            <small>La grabación se regirá por las políticas de tratamiento de datos personales, privacidad y la normatividad vigente.</small>
                         </div>
 
                         <div class="form-group full-width consent-choice">
@@ -126,10 +125,7 @@
                                 <option value="NO">No autorizar</option>
                                 <option value="SI">Autorizar</option>
                             </select>
-                            <small>La transcripción se regirá por las políticas de tratamiento de datos personales, privacidad y la normatividad vigente.</small>
                         </div>
-
-                        <p>El paciente autoriza el tratamiento de sus datos personales conforme a la Ley 1581 de 2012 y el Decreto 1377 de 2013, con fines asistenciales y de custodia clínica.</p>
                     </div>
                 </div>
             </div>
@@ -159,7 +155,7 @@
                     <div class="form-group"><label for="TELEFONO">Teléfono</label><input type="tel" id="TELEFONO" required></div>
                     <div class="form-group"><label for="CORREO">Correo Electrónico</label><input type="email" id="CORREO" required></div>
                     <div class="form-group"><label for="CONTACTO_E">Contacto de Emergencia</label><input type="text" id="CONTACTO_E" required></div>
-                    <div class="form-group"><label for="TEL_EMERGENCIA">Teléfono de Emergencia</label><input type="tel" id="TEL_EMERGENCIA" required></div>
+                    <div class="form-group"><label for="TEL_EMERGENCIA">Teléfono de Emergencia</label><input type="text" id="TEL_EMERGENCIA" required></div>
                 </div></div>
             </div>
             <!-- PASO 4: ANAMNESIS -->
@@ -248,8 +244,8 @@
                 <button type="button" id="clearSectionBtn" class="action-btn glass-effect" title="Limpiar sección actual">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9.75L14.25 12m0 0l2.25 2.25M14.25 12l2.25-2.25M14.25 12L12 14.25m-2.58 4.92l-6.375-6.375a1.125 1.125 0 010-1.59L9.42 4.83c.211-.211.498-.33.796-.33H19.5a2.25 2.25 0 012.25 2.25v10.5a2.25 2.25 0 01-2.25 2.25h-9.284c-.298 0-.585-.119-.796-.33z" /></svg>
                 </button>
-                <button type="button" id="pdfBtn" class="action-btn glass-effect" title="Generar PDF y Descargar" disabled>
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+                <button type="button" id="pdfBtn" class="action-btn glass-effect" title="Iniciar Generación de PDF" disabled>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" /></svg>
                 </button>
                 <button type="button" id="resetFormBtn" class="action-btn glass-effect" title="Empezar de nuevo">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0011.664 0l3.18-3.185m-3.181-4.995l-3.182-3.182a8.25 8.25 0 00-11.664 0l-3.18 3.185" /></svg>
@@ -264,7 +260,7 @@
     <div id="status-modal" class="modal-overlay">
         <div class="modal-content glass-effect">
             <h3 id="status-title">Procesando...</h3>
-            <p id="status-message">Por favor, espera mientras se genera la historia clínica.</p>
+            <p id="status-message">Por favor, espera.</p>
             <button id="status-close-btn" class="nav-btn modal-close-btn" style="display: none;">Cerrar</button>
         </div>
     </div>
@@ -408,13 +404,13 @@
             
             function gatherFormData() {
                 const formData = {};
-                const inputs = form.querySelectorAll("input, select, textarea");
+                const inputs = document.querySelectorAll("#hc-form input, #hc-form select, #hc-form textarea");
                 inputs.forEach(input => {
                     if (input.id) formData[input.id] = input.value;
                 });
                 return formData;
             }
-
+            
             function showStatusModal(title, message, showCloseButton = false) {
                 statusTitle.textContent = title;
                 statusMessage.textContent = message;
@@ -422,59 +418,29 @@
                 statusModal.classList.add('visible');
             }
 
-            async function generateAndDownloadPdf() {
-                if (!validateStep(currentStep)) return; 
-                
-                showStatusModal("Procesando...", "Por favor, espera mientras se genera la historia clínica.");
-                
-                const formData = gatherFormData();
+            async function triggerPdfGeneration() {
+                if (!pdfBtn.disabled) {
+                    showStatusModal("Iniciando Proceso...", "Enviando datos al servicio de automatización. Recibirás el PDF en tu correo.");
+                    const formData = gatherFormData();
 
-                try {
-                    // *** THIS IS THE CORRECTED LINE ***
-                    // We call the clean API URL defined in our netlify.toml
-                    const response = await fetch('/api/generar_pdf', { 
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(formData),
-                    });
+                    try {
+                        const response = await fetch('/api/generar_pdf', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(formData),
+                        });
 
-                    if (response.ok) {
-                        const contentType = response.headers.get("content-type");
-                        if (contentType && contentType.includes("application/pdf")) {
-                            const blob = await response.blob();
-                            const filenameHeader = response.headers.get('Content-Disposition');
-                            let filename = 'HistoriaClinica.pdf';
-                            if (filenameHeader) {
-                                const parts = filenameHeader.split('filename=');
-                                if (parts.length === 2) {
-                                    filename = parts[1].replace(/"/g, '');
-                                }
-                            }
+                        const result = await response.json();
+                        if (!response.ok) throw new Error(result.error || 'Ocurrió un error desconocido.');
 
-                            const url = window.URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.style.display = 'none';
-                            a.href = url;
-                            a.download = filename;
-                            document.body.appendChild(a);
-                            a.click();
-                            window.URL.revokeObjectURL(url);
-                            a.remove();
-                            showStatusModal("¡Éxito!", "La Historia Clínica se ha descargado correctamente.", true);
+                        showStatusModal("¡Éxito!", result.message, true);
+
+                    } catch (error) {
+                        if (error instanceof SyntaxError) {
+                            showStatusModal("Error de Comunicación", "El servidor respondió con un formato inesperado (HTML). Verifica la configuración de enrutamiento en Netlify.", true);
                         } else {
-                            const result = await response.json();
-                             showStatusModal("Información", result.message || "La operación se completó pero no se recibió un archivo.", true);
+                            showStatusModal("Error", `No se pudo completar la solicitud: ${error.message}`, true);
                         }
-                    } else {
-                        const errorResult = await response.json();
-                        throw new Error(errorResult.error || 'Ocurrió un error desconocido en el servidor.');
-                    }
-                } catch (error) {
-                    if (error instanceof SyntaxError) {
-                        showStatusModal("Error de Comunicación", "El servidor respondió con un formato inesperado (HTML). Verifica la configuración de enrutamiento en Netlify.", true);
-                    } else {
-                         console.error('Error:', error);
-                         showStatusModal("Error", `No se pudo completar la solicitud: ${error.message}`, true);
                     }
                 }
             }
@@ -485,10 +451,9 @@
             nextBtn.addEventListener("click", () => nextPrev(1));
             document.getElementById("F_NACIMIENTO").addEventListener("change", calculateAge);
             form.addEventListener('input', checkFormValidity);
-            pdfBtn.addEventListener("click", generateAndDownloadPdf);
-
+            pdfBtn.addEventListener('click', triggerPdfGeneration);
             statusCloseBtn.addEventListener("click", () => statusModal.classList.remove("visible"));
-
+            
             clearSectionBtn.addEventListener("click", () => {
                 const currentStepDiv = steps[currentStep];
                 const inputs = currentStepDiv.querySelectorAll("input, select, textarea");
@@ -517,8 +482,10 @@
                 resetConfirmModal.classList.remove("visible");
             });
 
-            for (let i = 0; i < progressSteps.length; i++) {
-                progressSteps[i].addEventListener("click", function() {
+            // Add step navigation via progress bar
+            const progressStepsElems = document.getElementsByClassName("progress-step");
+            for (let i = 0; i < progressStepsElems.length; i++) {
+                progressStepsElems[i].addEventListener("click", function() {
                     jumpToStep(parseInt(this.getAttribute("data-step")));
                 });
             }
