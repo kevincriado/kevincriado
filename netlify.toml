@@ -1,6 +1,10 @@
-# Configuración de compilación final para Python
+# Configuración de compilación final para forzar el entorno de Python
 [build]
+  # Este comando es la clave: obliga a Netlify a instalar las dependencias de Python.
+  command = "pip install -r requirements.txt"
+  # Directorio donde Netlify encontrará tu página principal
   publish = "."
+  # Directorio donde están tus funciones
   functions = "functions/"
 
 # Redirección para crear una URL de API limpia
@@ -9,4 +13,6 @@
   to = "/.netlify/functions/:splat"
   status = 200
   force = true
+
+
 
