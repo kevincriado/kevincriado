@@ -1,2 +1,1 @@
-docx-mailmerge==0.5.0
-cloudmersive-convert-api-client==3.3.0
+adobe-pdfservices-sdk==3.3.0
