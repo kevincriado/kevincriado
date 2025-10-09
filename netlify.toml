@@ -1,13 +1,13 @@
 # Configuración final para un proyecto de lenguaje mixto (JS y Python)
 [build]
-  # Este comando es la clave: instala primero las dependencias de JS (si existen), y LUEGO las de Python.
+  # Instala primero las dependencias de JS (si existen), y LUEGO las de Python.
   command = "npm install && pip install -r requirements.txt"
-  # Directorio donde está tu página principal (la raíz)
+  # Directorio donde está tu página principal
   publish = "."
-  # Directorio donde están todas tus funciones
+  # Directorio donde están tus funciones
   functions = "functions/"
 
-# Especifica la versión de Python a usar para las funciones .py
+# Especifica la versión de Python a usar de la manera correcta y oficial
 [build.environment]
   PYTHON_VERSION = "3.9"
 
