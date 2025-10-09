@@ -88,7 +88,7 @@
     <div class="container glass-effect">
         <h1>Historia Clínica Psicológica</h1>
         <p class="legal-subtitle">
-            Al finalizar, se iniciará el proceso de generación del PDF, que será enviado a tu correo electrónico en unos momentos.
+            Al finalizar, se generará un PDF a partir de la plantilla de Google Docs.
         </p>
 
         <div class="progress-bar glass-effect">
@@ -109,21 +109,21 @@
                 <div class="section">
                     <h2>I. Consentimiento y Autorizaciones</h2>
                      <div class="consent-text">
-                        <p>El paciente manifiesta haber leído y comprendido en su totalidad el consentimiento informado para la prestación de servicios de psicología en modalidad de videoconsulta, aceptando y firmando el mismo de conformidad con la normatividad vigente.</p>
+                        <p>El paciente manifiesta haber leído y comprendido en su totalidad el consentimiento informado para la prestación de servicios de psicología en modalidad de videoconsulta.</p>
                         
                         <div class="form-group full-width consent-choice">
-                            <label for="autoriza_grabacion">El paciente expresa de manera libre y voluntaria su decisión sobre la <strong>grabación</strong> de la videoconsulta:</label>
-                            <select id="autoriza_grabacion" required>
-                                <option value="NO">No autorizar</option>
-                                <option value="SI">Autorizar</option>
+                            <label for="GRABACION">Decisión sobre la <strong>grabación</strong> de la videoconsulta:</label>
+                            <select id="GRABACION" required>
+                                <option value="NO autorizar">NO autorizar</option>
+                                <option value="SI autorizar">SI autorizar</option>
                             </select>
                         </div>
 
                         <div class="form-group full-width consent-choice">
-                            <label for="autoriza_transcripcion">El paciente expresa de manera libre y voluntaria su decisión sobre la <strong>transcripción</strong> de la videoconsulta:</label>
-                            <select id="autoriza_transcripcion" required>
-                                <option value="NO">No autorizar</option>
-                                <option value="SI">Autorizar</option>
+                            <label for="TRANSCRIPCION">Decisión sobre la <strong>transcripción</strong> de la videoconsulta:</label>
+                            <select id="TRANSCRIPCION" required>
+                                <option value="NO autorizar">NO autorizar</option>
+                                <option value="SI autorizar">SI autorizar</option>
                             </select>
                         </div>
                     </div>
@@ -132,7 +132,22 @@
 
             <!-- PASO 2: DATOS DE CONSULTA -->
             <div class="wizard-step">
-                <div class="section"><h2>II. Datos de la Consulta</h2><p class="section-summary">Datos automáticos de la consulta actual, como fecha y hora del sistema.</p><div class="form-grid"><div class="form-group"><label for="FECHA_CONS">Fecha de Consulta</label><input type="text" id="FECHA_CONS" disabled></div><div class="form-group"><label for="HORA_CONS">Hora de Consulta</label><input type="text" id="HORA_CONS" disabled></div></div></div>
+                <div class="section">
+                    <h2>II. Datos de la Consulta</h2>
+                    <p class="section-summary">Información general de la sesión.</p>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="TIPO_CONSULTA">Tipo de Consulta</label>
+                            <select id="TIPO_CONSULTA" required>
+                                <option value="">Seleccione...</option>
+                                <option value="Videoconsulta por Psicología de Primera Vez">Videoconsulta por Psicología de Primera Vez</option>
+                                <option value="Videoconsulta por Psicología de Control o Seguimiento">Videoconsulta por Psicología de Control o Seguimiento</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label for="FECHA_CONS">Fecha de Consulta</label><input type="text" id="FECHA_CONS" disabled></div>
+                        <div class="form-group"><label for="HORA_CONS">Hora de Consulta</label><input type="text" id="HORA_CONS" disabled></div>
+                    </div>
+                </div>
             </div>
             
             <!-- PASO 3: DATOS DEL PACIENTE -->
@@ -140,7 +155,7 @@
                  <div class="section"><h2>III. Datos del Paciente</h2><p class="section-summary">Información demográfica y de contacto del paciente.</p><div class="form-grid">
                     <div class="form-group full-width"><label for="NOMBRE_COMPLETO">Nombres y Apellidos Completos</label><input type="text" id="NOMBRE_COMPLETO" required></div>
                     <div class="form-group"><label for="TIPO_DTO">Tipo de Documento</label><select id="TIPO_DTO" required><option value="">Seleccione...</option><option value="CC">CC</option><option value="TI">TI</option><option value="RC">RC</option><option value="CE">CE</option><option value="PAS">PAS</option><option value="PPT">PPT</option><option value="PEP">PEP</option></select></div>
-                    <div class="form-group"><label for="DOCUMENTO">Número de Documento</label><input type="text" id="DOCUMENTO" required></div>
+                    <div class="form-group"><label for="DOCUMENTO">Número de Documento</label><input type="text" pattern="[0-9]*" inputmode="numeric" id="DOCUMENTO" required></div>
                     <div class="form-group"><label for="F_NACIMIENTO">Fecha de Nacimiento</label><input type="date" id="F_NACIMIENTO" required></div>
                     <div class="form-group"><label for="EDAD">Edad</label><input type="text" id="EDAD" disabled placeholder="Se calcula automáticamente"></div>
                     <div class="form-group"><label for="SEXO">Sexo</label><select id="SEXO" required><option value="">Seleccione...</option><option value="Masculino">Masculino</option><option value="Femenino">Femenino</option></select></div>
@@ -152,10 +167,10 @@
                     <div class="form-group"><label for="UBICACION">Ubicación durante la consulta</label><input type="text" id="UBICACION" placeholder="Ciudad, Departamento" required></div>
                     <div class="form-group"><label for="EDUCACION">Nivel Educativo</label><select id="EDUCACION" required><option value="">Seleccione...</option><option value="Preescolar">Preescolar</option><option value="Básica Primaria">Básica Primaria</option><option value="Básica Secundaria">Básica Secundaria</option><option value="Media">Media</option><option value="Técnica">Técnica</option><option value="Tecnológica">Tecnológica</option><option value="Profesional">Profesional</option><option value="Especialización">Especialización</option><option value="Maestría">Maestría</option><option value="Doctorado">Doctorado</option></select></div>
                     <div class="form-group"><label for="OCUPACION">Ocupación</label><input type="text" id="OCUPACION" required></div>
-                    <div class="form-group"><label for="TELEFONO">Teléfono</label><input type="tel" id="TELEFONO" required></div>
+                    <div class="form-group"><label for="TELEFONO">Teléfono</label><input type="tel" pattern="[0-9]*" inputmode="numeric" id="TELEFONO" required></div>
                     <div class="form-group"><label for="CORREO">Correo Electrónico</label><input type="email" id="CORREO" required></div>
                     <div class="form-group"><label for="CONTACTO_E">Contacto de Emergencia</label><input type="text" id="CONTACTO_E" required></div>
-                    <div class="form-group"><label for="TEL_EMERGENCIA">Teléfono de Emergencia</label><input type="text" id="TEL_EMERGENCIA" required></div>
+                    <div class="form-group"><label for="TEL_EMERGENCIA">Teléfono de Emergencia</label><input type="tel" pattern="[0-9]*" inputmode="numeric" id="TEL_EMERGENCIA" required></div>
                 </div></div>
             </div>
             <!-- PASO 4: ANAMNESIS -->
@@ -168,8 +183,8 @@
                     <div class="form-group"><label for="SUENO">Patrones de Sueño</label><small>Horas de sueño, calidad, insomnio, pescadillas.</small><input type="text" id="SUENO" required></div>
                     <div class="form-group"><label for="ALIMENTACION">Patrones de Alimentación</label><small>Apetito, cambios de peso, dietas, conductas alimentarias.</small><input type="text" id="ALIMENTACION" required></div>
                     <div class="form-group"><label for="SEX_ACTIVO">Vida Sexual Activa</label><select id="SEX_ACTIVO" required><option value="">Seleccione...</option><option value="Sí">Sí</option><option value="No">No</option></select></div>
-                    <div class="form-group"><label for="EDAD_SEX">Edad de Inicio Sexual</label><input type="text" id="EDAD_SEX" required></div>
-                    <div class="form-group"><label for="N_PAREJAS">Número de Parejas</label><input type="text" id="N_PAREJAS" required></div>
+                    <div class="form-group"><label for="EDAD_SEX">Edad de Inicio Sexual</label><input type="number" id="EDAD_SEX" min="0" required></div>
+                    <div class="form-group"><label for="N_PAREJAS">Número de Parejas</label><input type="number" id="N_PAREJAS" min="0" required></div>
                     <div class="form-group"><label for="IMG_CORPORAL">Imagen Corporal</label><select id="IMG_CORPORAL" required><option value="">Seleccione...</option><option value="Positiva">Positiva</option><option value="Negativa">Negativa</option></select></div>
                     <div class="form-group"><label for="TABACO">Consumo de Tabaco</label><small>Frecuencia, cantidad, desde cuándo.</small><input type="text" id="TABACO" required></div>
                     <div class="form-group"><label for="ALCOHOL">Consumo de Alcohol</label><small>Frecuencia, cantidad, desde cuándo.</small><input type="text" id="ALCOHOL" required></div>
@@ -217,7 +232,51 @@
             <div class="wizard-step">
                  <div class="section"><h2>VII. Análisis e Intervención</h2><p class="section-summary">Formulación del análisis del caso, diagnósticos, objetivos y plan de tratamiento.</p><div class="form-grid">
                     <div class="form-group full-width"><label for="ANALISIS_CASO">Análisis del Caso</label><small>Formulación clínica que integra la información para explicar la problemática actual desde un enfoque teórico.</small><textarea id="ANALISIS_CASO" rows="5" required></textarea></div>
-                    <div class="form-group"><label for="DIAGNOSTICO_PRINC">Diagnóstico Principal (CIE-10/DSM-5)</label><small>Diagnóstico principal según los manuales diagnósticos.</small><input type="text" id="DIAGNOSTICO_PRINC" required></div>
+                    <div class="form-group">
+                        <label for="DIAGNOSTICO_PRINC">Diagnóstico Principal (CIE-10/DSM-5)</label>
+                        <small>Selecciona uno de los diagnósticos más comunes.</small>
+                        <select id="DIAGNOSTICO_PRINC" required>
+                            <option value="">Seleccione un diagnóstico...</option>
+                            <optgroup label="F30-F39: Trastornos del humor (afectivos)">
+                                <option value="F32.0 - Episodio depresivo leve">F32.0 - Episodio depresivo leve</option>
+                                <option value="F32.1 - Episodio depresivo moderado">F32.1 - Episodio depresivo moderado</option>
+                                <option value="F32.2 - Episodio depresivo grave sin síntomas psicóticos">F32.2 - Episodio depresivo grave sin síntomas psicóticos</option>
+                                <option value="F32.3 - Episodio depresivo grave con síntomas psicóticos">F32.3 - Episodio depresivo grave con síntomas psicóticos</option>
+                                <option value="F32.9 - Episodio depresivo, no especificado">F32.9 - Episodio depresivo, no especificado</option>
+                                <option value="F33.0 - Trastorno depresivo recurrente, episodio actual leve">F33.0 - Trastorno depresivo recurrente, episodio actual leve</option>
+                                <option value="F33.1 - Trastorno depresivo recurrente, episodio actual moderado">F33.1 - Trastorno depresivo recurrente, episodio actual moderado</option>
+                                <option value="F34.1 - Distimia">F34.1 - Distimia</option>
+                                <option value="F31 - Trastorno afectivo bipolar">F31 - Trastorno afectivo bipolar</option>
+                            </optgroup>
+                            <optgroup label="F40-F48: Trastornos neuróticos, secundarios a situaciones estresantes y somatomorfos">
+                                <option value="F40.0 - Agorafobia">F40.0 - Agorafobia</option>
+                                <option value="F40.1 - Fobias sociales">F40.1 - Fobias sociales</option>
+                                <option value="F41.0 - Trastorno de pánico (ansiedad paroxística episódica)">F41.0 - Trastorno de pánico (ansiedad paroxística episódica)</option>
+                                <option value="F41.1 - Trastorno de ansiedad generalizada">F41.1 - Trastorno de ansiedad generalizada</option>
+                                <option value="F41.2 - Trastorno mixto ansioso-depresivo">F41.2 - Trastorno mixto ansioso-depresivo</option>
+                                <option value="F42 - Trastorno obsesivo-compulsivo">F42 - Trastorno obsesivo-compulsivo</option>
+                                <option value="F43.0 - Reacción a estrés agudo">F43.0 - Reacción a estrés agudo</option>
+                                <option value="F43.1 - Trastorno de estrés postraumático">F43.1 - Trastorno de estrés postraumático</option>
+                                <option value="F43.2 - Trastornos de adaptación">F43.2 - Trastornos de adaptación</option>
+                                <option value="F45.0 - Trastorno de somatización">F45.0 - Trastorno de somatización</option>
+                            </optgroup>
+                            <optgroup label="F90-F98: Trastornos del comportamiento y de las emociones de comienzo habitual en la infancia y adolescencia">
+                                 <option value="F90.0 - Trastorno de la actividad y de la atención">F90.0 - Trastorno de la actividad y de la atención (TDAH)</option>
+                                 <option value="F91.3 - Trastorno disocial desafiante y oposicionista">F91.3 - Trastorno disocial desafiante y oposicionista</option>
+                                 <option value="F93.1 - Trastorno de ansiedad de separación en la infancia">F93.1 - Trastorno de ansiedad de separación en la infancia</option>
+                                 <option value="F94.0 - Mutismo selectivo">F94.0 - Mutismo selectivo</option>
+                            </optgroup>
+                             <optgroup label="F80-F89: Trastornos del desarrollo psicológico">
+                                <option value="F84.0 - Autismo infantil">F84.0 - Autismo infantil</option>
+                                <option value="F84.5 - Síndrome de Asperger">F84.5 - Síndrome de Asperger</option>
+                            </optgroup>
+                            <optgroup label="Otros Diagnósticos">
+                                <option value="Z73.1 - Tipo de personalidad Tipo A">Z73.1 - Tipo de personalidad Tipo A</option>
+                                <option value="Z63.0 - Problemas en la relación con el cónyuge o la pareja">Z63.0 - Problemas en la relación con el cónyuge o la pareja</option>
+                                <option value="Z60.0 - Problemas relacionados con el ajuste a las transiciones del ciclo vital">Z60.0 - Problemas relacionados con el ajuste a las transiciones del ciclo vital</option>
+                            </optgroup>
+                        </select>
+                    </div>
                     <div class="form-group"><label for="DIAGNOSTICO_SEC">Diagnósticos Secundarios</label><small>Otros diagnósticos o condiciones relevantes.</small><input type="text" id="DIAGNOSTICO_SEC"></div>
                     <div class="form-group full-width"><label for="OBJETIVO_TRATAMIENTO">Objetivos del Tratamiento</label><small>Metas acordadas con el paciente, medibles y alcanzables.</small><textarea id="OBJETIVO_TRATAMIENTO" rows="4" required></textarea></div>
                     <div class="form-group full-width"><label for="ENFOQUE_ESTRATEGIAS">Enfoque y Estrategias</label><small>Ej: Terapia Cognitivo-Conductual, Psicoeducación, etc.</small><textarea id="ENFOQUE_ESTRATEGIAS" rows="4" required></textarea></div>
@@ -489,6 +548,17 @@
                     jumpToStep(parseInt(this.getAttribute("data-step")));
                 });
             }
+
+            // --- VALIDACIÓN DE CAMPOS NUMÉRICOS ---
+            const numericFields = ['DOCUMENTO', 'TELEFONO', 'TEL_EMERGENCIA'];
+            numericFields.forEach(id => {
+                const input = document.getElementById(id);
+                if (input) {
+                    input.addEventListener('input', function(e) {
+                        e.target.value = e.target.value.replace(/[^0-9]/g, '');
+                    });
+                }
+            });
         });
     </script>
 </body>
