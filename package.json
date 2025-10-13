@@ -1,9 +1,0 @@
-{
-  "name": "netlify-mixed-language-project",
-  "version": "1.0.0",
-  "description": "Dependencias para las funciones de JavaScript (ej. nodemailer) y para permitir la construcción mixta.",
-  "dependencies": {
-    "nodemailer": "^6.9.14"
-  }
-}
-
