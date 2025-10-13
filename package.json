@@ -1,0 +1,15 @@
+{
+  "name": "netlify-signature-app",
+  "version": "1.0.0",
+  "description": "Lista de dependencias requeridas para Netlify Functions (nodemailer).",
+  "main": "index.js",
+  "dependencies": {
+    "nodemailer": "^6.9.14"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Kevin Criado",
+  "license": "ISC"
+}
